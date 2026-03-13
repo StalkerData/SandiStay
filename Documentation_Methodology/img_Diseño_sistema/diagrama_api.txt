@@ -1,0 +1,62 @@
+graph LR
+    %% ==========================================
+    %% ESTILOS (Color Coding por Verbo HTTP)
+    %% ==========================================
+    classDef get fill:#e3f2fd,stroke:#1565c0,stroke-width:2px,color:#0d47a1;
+    classDef post fill:#e8f5e9,stroke:#2e7d32,stroke-width:2px,color:#1b5e20;
+    classDef patch fill:#fff3e0,stroke:#ef6c00,stroke-width:2px,color:#e65100;
+    classDef module fill:#f3e5f5,stroke:#7b1fa2,stroke-width:2px,color:#4a148c,font-weight:bold;
+    classDef root fill:#263238,stroke:#000,stroke-width:3px,color:white,font-weight:bold;
+
+    %% ==========================================
+    %% NODO RAÍZ (Gateway)
+    %% ==========================================
+    Client((Cliente<br>Svelte)) -->|HTTPS| Gateway[API Gateway<br>/api/v1]:::root
+
+    %% ==========================================
+    %% RAMAS PRINCIPALES (Módulos)
+    %% ==========================================
+    Gateway --> Auth(Auth Module<br>/auth):::module
+    Gateway --> Catalog(Catalog Module<br>/catalog):::module
+    Gateway --> Bookings(Bookings Module<br>/bookings):::module
+    Gateway --> Finance(Finance & Reports<br>/finance):::module
+
+    %% ==========================================
+    %% NODOS DE ENDPOINTS (Hojas)
+    %% ==========================================
+
+    %% --- Auth ---
+    Auth -- POST --> Login[Login<br>/login]:::post
+    Auth -- GET --> Me[Perfil<br>/me]:::get
+    Auth -- POST --> CreateUser[Crear Admin<br>/users]:::post
+
+    %% --- Catalog ---
+    Catalog -- GET --> Rooms[Listar Habitaciones<br>/rooms]:::get
+    Catalog -- GET --> Areas[Listar Áreas<br>/areas]:::get
+    Catalog -- GET --> RoomDetail[Detalle<br>/rooms/:id]:::get
+
+    %% --- Bookings ---
+    Bookings -- POST --> CreateBook[Crear Reserva<br>/]:::post
+    Bookings -- GET --> ListBook[Listar<br>/]:::get
+    Bookings -- GET --> DetailBook[Detalle<br>/:id]:::get
+    Bookings -- GET --> TotalBook[Pre-visualizar Total<br>/:id/total]:::get
+    Bookings -- PATCH --> CancelBook[Cancelar<br>/:id/cancel]:::patch
+    Bookings -- POST --> Checkout[Finalizar/Checkout<br>/:id/checkout]:::post
+
+    %% --- Finance ---
+    Finance -- GET --> Balance[Estado Cuenta<br>/balance/:id]:::get
+    Finance -- POST --> GenInvoice[Generar Factura<br>/invoices/generate]:::post
+    Finance -- GET --> PDF[Descargar PDF<br>/invoices/:id/pdf]:::get
+    Finance -- GET --> Occupancy[Ocupación<br>/occupancy]:::get
+    Finance -- GET --> History[Historial Cliente<br>/clients/:id/history]:::get
+    Finance -- POST --> Mock[Simular Pago<br>/payments/simulate]:::post
+
+    %% ==========================================
+    %% LEYENDA (Subgrafo invisible para orden)
+    %% ==========================================
+    subgraph Leyenda [Leyenda de Verbos]
+        direction TB
+        L1(GET - Lectura):::get
+        L2(POST - Creación):::post
+        L3(PATCH - Modificación):::patch
+    end

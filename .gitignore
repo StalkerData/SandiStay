@@ -1,0 +1,62 @@
+# --- Java/Spring (Eclipse/IntelliJ IDEA) ---
+### Build files
+/target/
+/bin/
+/out/
+
+### IDE-specific files
+.idea/
+*.ipr
+*.iws
+*.iml
+*.class
+.classpath
+.project
+.settings/
+/bin/
+/gen/
+
+### Logs and temporary files
+*.log
+*.tmp
+*.swp
+*~
+.DS_Store
+
+# --- Docker ---
+### Docker files
+*.env
+docker-compose.override.yml
+docker-compose.dev.yml
+.env.local
+.env.development
+.env.test
+.env.production
+
+# --- Node.js/Svelte 5 ---
+### Node modules
+node_modules/
+
+### Build output
+/dist/
+/build/
+/public/build/
+/public/dist/
+
+### Environment files
+.env
+.env.local
+.env.development
+.env.test
+.env.production
+
+### Logs and debug files
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# --- Excluir directorio SQL_Files ---
+!SQL_Files/
+SQL_Files/**
+!SQL_Files/.gitkeep
+
