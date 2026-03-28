@@ -1,0 +1,54 @@
+﻿id,Tipo,Asunto,Estado,Fecha de inicio,Fecha de finalización,Duración,% Completado,% total completado
+114,Summary task,"0.0 Fases Previas (Requisitos, Análisis y Diseño)",New,16.02.2026,27.03.2026,30,"",0.9
+115,Task,0.1 Ejecución de Fases 1 a 4,New,16.02.2026,30.03.2026,31,0.9,""
+48,Summary task,1.0 Configuración del Entorno,New,01.04.2026,07.04.2026,5,"",0.0
+54,Task,1.1 Configuración Repositorio,New,01.04.2026,01.04.2026,1,0.0,""
+55,Task,1.2 Docker Compose Local,New,02.04.2026,03.04.2026,2,0.0,""
+56,Task,1.3 Init Backend (Spring),New,06.04.2026,06.04.2026,1,0.0,""
+57,Task,1.4 Init Frontend (Svelte),New,07.04.2026,07.04.2026,1,0.0,""
+49,Summary task,2.0 Implementación de Base de Datos,New,08.04.2026,22.04.2026,11,"",0.0
+58,Task,2.1 DDL Tablas y Relaciones,New,08.04.2026,10.04.2026,3,0.0,""
+59,Task,2.2 Constraints Avanzados,New,13.04.2026,14.04.2026,2,0.0,""
+60,Task,2.3 Programación PL/pgSQL,New,15.04.2026,21.04.2026,5,0.0,""
+61,Task,2.4 Datos Semilla (Seed),New,22.04.2026,22.04.2026,1,0.0,""
+78,Summary task,3.0 Desarrollo Backend (Spring Boot - Logic Layer),New,23.04.2026,05.06.2026,32,"",0.0
+79,Summary task,3.1 Módulo Transversal (Shared Kernel),New,23.04.2026,29.04.2026,5,"",0.0
+84,Task,3.1.1 Configuración de Seguridad,New,23.04.2026,27.04.2026,3,0.0,""
+85,Task,3.1.2 Manejo Global Excepciones,New,28.04.2026,29.04.2026,2,0.0,""
+80,Summary task,3.2 Módulo de Autenticación (Auth),New,30.04.2026,06.05.2026,5,"",0.0
+86,Task,3.2.1 Endpoint Login,New,30.04.2026,04.05.2026,3,0.0,""
+87,Task,3.2.2 Endpoint Perfil (/me),New,05.05.2026,06.05.2026,2,0.0,""
+81,Summary task,3.3 Módulo de Catálogo (Rooms/Areas),New,07.05.2026,11.05.2026,3,"",0.0
+88,Task,3.3.1 Búsqueda y Filtros,New,07.05.2026,11.05.2026,3,0.0,""
+82,Summary task,3.4 Módulo de Reservas (Core),New,12.05.2026,01.06.2026,15,"",0.0
+89,Task,3.4.1 Lógica de Creación,New,12.05.2026,20.05.2026,7,0.0,""
+90,Task,3.4.2 Lógica de Cancelación,New,21.05.2026,27.05.2026,5,0.0,""
+91,Task,3.4.3 Integración Mock Pagos,New,28.05.2026,01.06.2026,3,0.0,""
+83,Summary task,3.5 Módulo de Reportes,New,02.06.2026,04.06.2026,3,"",0.0
+92,Task,3.5.1 Generación de PDFs,New,02.06.2026,04.06.2026,3,0.0,""
+51,Summary task,4.0 Desarrollo Frontend,New,08.06.2026,20.07.2026,31,"",0.0
+93,Summary task,4.1 Estructura y Componentes Base,New,08.06.2026,12.06.2026,5,"",0.0
+96,Task,4.1.1 Layouts Base,New,08.06.2026,09.06.2026,2,0.0,""
+97,Task,4.1.2 Componentes UI,New,10.06.2026,12.06.2026,3,0.0,""
+94,Summary task,4.2 Portal Público (Cliente),New,15.06.2026,30.06.2026,12,"",0.0
+98,Task,4.2.1 Inicio y Búsqueda,New,15.06.2026,18.06.2026,4,0.0,""
+99,Task,4.2.2 Detalle de Habitación,New,19.06.2026,22.06.2026,2,0.0,""
+100,Task,4.2.3 Flujo de Reserva,New,23.06.2026,30.06.2026,6,0.0,""
+95,Summary task,4.3 Portal Administrativo (Staff),New,01.07.2026,17.07.2026,13,"",0.0
+101,Task,4.3.1 Login y Guards,New,01.07.2026,03.07.2026,3,0.0,""
+102,Task,4.3.2 Dashboard Reservas,New,06.07.2026,09.07.2026,4,0.0,""
+103,Task,4.3.3 Gestión Check-in/out,New,10.07.2026,15.07.2026,4,0.0,""
+104,Task,4.3.4 Vista de Reportes,New,16.07.2026,17.07.2026,2,0.0,""
+52,Summary task,5.0 Pruebas (QA),New,21.07.2026,10.08.2026,15,"",0.0
+105,Task,5.1 Unit Testing Backend,New,21.07.2026,27.07.2026,5,0.0,""
+106,Task,5.2 Integration Testing,New,28.07.2026,31.07.2026,4,0.0,""
+107,Task,5.3 E2E Frontend,New,03.08.2026,06.08.2026,4,0.0,""
+108,Task,5.4 Security Testing,New,07.08.2026,10.08.2026,2,0.0,""
+53,Summary task,6.0 Despliegue,New,11.08.2026,19.08.2026,7,"",0.0
+109,Task,6.1 Configuración VPS,New,11.08.2026,12.08.2026,2,0.0,""
+110,Task,6.2 Dominio y SSL,New,13.08.2026,14.08.2026,2,0.0,""
+111,Task,6.3 Despliegue Final,New,17.08.2026,18.08.2026,2,0.0,""
+151,Milestone,Hito 0: Planificación y Diseño Aprobados (Baseline),New,31.03.2026,31.03.2026,1,"",""
+152,Milestone,Hito 1: Base de Datos y API Funcional,New,05.06.2026,05.06.2026,1,"",""
+153,Milestone,Hito 2: Interfaz de Usuario Completada,New,20.07.2026,20.07.2026,1,"",""
+154,Milestone,Hito 3: Go-Live (Paso a Producción),New,19.08.2026,19.08.2026,1,"",""
