@@ -1,0 +1,43 @@
+# ==========================================
+# Entorno Local de Desarrollo - SandiStay
+# ==========================================
+name: sandistay-local
+
+services:
+  # 1. Base de Datos PostgreSQL
+  db:
+    image: postgres:17-alpine
+    container_name: sandistay_db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: sandi_admin
+      POSTGRES_PASSWORD: sandi_password123
+      POSTGRES_DB: sandistay_db
+      TZ: America/Bogota # Zona horaria de Colombia
+    ports:
+      - "5432:5432"
+    volumes:
+      # Persistencia de datos (para no perder la BD al apagar Docker)
+      - ./volumes/pg_data:/var/lib/postgresql/data
+      # TRUCO SENIOR: Auto-ejecutar scripts SQL al iniciar por primera vez
+      - ./SQL_Files:/docker-entrypoint-initdb.d/
+    networks:
+      - sandistay-net
+
+  # 2. Gestor de Base de Datos (Adminer)
+  adminer:
+    image: adminer:latest
+    container_name: sandistay_adminer
+    restart: unless-stopped
+    ports:
+      - "8081:8080"
+    environment:
+      ADMINER_DEFAULT_SERVER: db
+    depends_on:
+      - db
+    networks:
+      - sandistay-net
+
+networks:
+  sandistay-net:
+    driver: bridge

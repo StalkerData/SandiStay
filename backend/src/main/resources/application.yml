@@ -1,0 +1,29 @@
+spring:
+  application:
+    name: sandistay-backend
+
+  # Configuración de conexión a PostgreSQL (Docker Local)
+  datasource:
+    url: jdbc:postgresql://localhost:5432/sandistay_db
+    username: sandi_admin
+    password: sandi_password123
+    driver-class-name: org.postgresql.Driver
+
+  jpa:
+    # ¡CRÍTICO! Como ya creamos las tablas con SQL_Files, le decimos a Hibernate 
+    # que NO intente crear ni borrar tablas, solo que valide que existan.
+    hibernate:
+      ddl-auto: validate
+    
+    # Mostrar el SQL en la consola para depurar
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
+        highlight_sql: true
+
+# Configuración del servidor web
+server:
+  port: 8082 # evitar problemas con los otros servicios de Docker
+  servlet:
+    context-path: /api/v1
