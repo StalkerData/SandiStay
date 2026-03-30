@@ -1,62 +1,73 @@
-# --- Java/Spring (Eclipse/IntelliJ IDEA) ---
-### Build files
-/target/
-/bin/
-/out/
+# ==========================================
+# .gitignore Maestro - SandiStay (Monorepo)
+# ==========================================
 
-### IDE-specific files
+# --- 1. Sistema Operativo y Editores ---
+.DS_Store
+Thumbs.db
 .idea/
+.vscode/
+*.swp
+*.swo
+*~
+*.iml
 *.ipr
 *.iws
-*.iml
-*.class
-.classpath
-.project
-.settings/
-/bin/
-/gen/
 
-### Logs and temporary files
+# --- 2. Archivos Comunes y Logs ---
 *.log
 *.tmp
-*.swp
-*~
-.DS_Store
-
-# --- Docker ---
-### Docker files
-*.env
-docker-compose.override.yml
-docker-compose.dev.yml
-.env.local
-.env.development
-.env.test
-.env.production
-
-# --- Node.js/Svelte 5 ---
-### Node modules
-node_modules/
-
-### Build output
-/dist/
-/build/
-/public/build/
-/public/dist/
-
-### Environment files
-.env
-.env.local
-.env.development
-.env.test
-.env.production
-
-### Logs and debug files
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+pnpm-debug.log*
 
-# --- Excluir directorio SQL_Files ---
-!SQL_Files/
-SQL_Files/**
+# --- 3. Backend (Spring Boot / Java / Gradle / Maven) ---
+**/target/
+**/bin/
+**/out/
+**/.gradle/
+**/build/
+**/.settings/
+.classpath
+.project
+*.class
+*.jar
+*.war
+
+# --- 4. Frontend (SvelteKit / Node.js) ---
+**/node_modules/
+**/.svelte-kit/
+**/dist/
+# (El build de Svelte suele ir a /build o /dist, ya cubiertos arriba)
+
+# --- 5. Docker e Infraestructura ---
+.env
+.env.*
+!.env.example
+docker-compose.override.yml
+docker-compose.dev.yml
+volumes/
+pg_data/
+uploads/
+
+# --- 6. Reglas Específicas por Carpeta (Monorepo) ---
+# Backend específico
+backend/.gradle/
+backend/build/
+backend/out/
+backend/bin/
+
+# Frontend específico
+frontend/node_modules/
+frontend/.svelte-kit/
+frontend/build/
+frontend/dist/
+frontend/.env
+frontend/.env.*
+!frontend/.env.example
+
+# --- 7. Directorio SQL_Files ---
+# Ignora el contenido pero mantiene la carpeta si tiene un .gitkeep
+SQL_Files/*
 !SQL_Files/.gitkeep
-
