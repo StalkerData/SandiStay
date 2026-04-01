@@ -24,6 +24,6 @@ spring:
 
 # Configuración del servidor web
 server:
-  port: 8082 # evitar problemas con los otros servicios de Docker
+  port: 8082
   servlet:
     context-path: /api/v1
