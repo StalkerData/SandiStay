@@ -27,3 +27,15 @@ server:
   port: 8082
   servlet:
     context-path: /api/v1
+
+# ==========================================
+# Configuración de Seguridad y JWT
+# ==========================================
+security:
+  jwt:
+    # TRUCO SENIOR: Intenta leer la variable de entorno JWT_SECRET (para Producción en Docker).
+    # Si no existe (como en tu entorno local), usa el valor por defecto después de los dos puntos (:).
+    # Esta clave es "SandiStaySecretKeyParaFirmaDeTokens2026!" codificada en Base64 (cumple los 256 bits).
+    secret-key: ${JWT_SECRET:U2FuZGlTdGF5U2VjcmV0S2V5UGFyYUZpcm1hRGVUb2tlbnMyMDI2IQ==}
+    # Tiempo de expiración: 24 horas en milisegundos (1000 * 60 * 60 * 24)
+    expiration-time: 86400000
