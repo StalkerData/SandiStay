@@ -32,8 +32,14 @@ public class SecurityConfig {
 	SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
 		http.cors(cors -> cors.configurationSource(corsConfigurationSource())).csrf(csrf -> csrf.disable())
 				.sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-				.authorizeHttpRequests(auth -> auth.requestMatchers("/api/v1/auth/login").permitAll()
-						.requestMatchers("/api/v1/catalog/**").permitAll().anyRequest().authenticated())
+				// .authorizeHttpRequests(auth ->
+				// auth.requestMatchers("/api/v1/auth/login").permitAll()
+				// .requestMatchers("/api/v1/catalog/**").permitAll().anyRequest().authenticated())
+				.authorizeHttpRequests(auth -> auth.requestMatchers("/auth/login").permitAll()
+						.requestMatchers("/catalog/**").permitAll()
+						.requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
+						// Todo lo demás requiere token
+						.anyRequest().authenticated())
 				// AQUÍ ESTÁ LA MAGIA: Ponemos tu filtro ANTES del filtro estándar de Spring
 				.addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
 

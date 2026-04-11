@@ -50,6 +50,20 @@ public class GlobalExceptionHandler {
 		return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse);
 	}
 
+	/**
+	 * 3. Maneja errores de credenciales incorrectas (Login fallido). Devuelve un
+	 * 401 Unauthorized en lugar de un 500.
+	 */
+	@ExceptionHandler(org.springframework.security.authentication.BadCredentialsException.class)
+	public ResponseEntity<ErrorResponse> handleBadCredentials(
+			org.springframework.security.authentication.BadCredentialsException ex, HttpServletRequest request) {
+
+		ErrorResponse errorResponse = new ErrorResponse(LocalDateTime.now(), HttpStatus.UNAUTHORIZED.value(),
+				"Unauthorized", "Usuario o contraseña incorrectos", request.getRequestURI());
+
+		return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(errorResponse);
+	}
+
 	// Más adelante agregaremos manejadores personalizados aquí
 	// Como (Ej: ReservaNotFoundException, PagoRechazadoException)
 }

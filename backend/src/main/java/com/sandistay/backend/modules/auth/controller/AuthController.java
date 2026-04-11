@@ -6,6 +6,8 @@ import com.sandistay.backend.modules.auth.dto.UserProfileResponse;
 import com.sandistay.backend.modules.auth.model.Usuario;
 import com.sandistay.backend.modules.auth.repository.UsuarioRepository;
 import com.sandistay.backend.modules.auth.service.AuthService;
+
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
@@ -15,7 +17,8 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 @RestController
-@RequestMapping("/api/v1/auth")
+@RequestMapping("/auth")
+@SecurityRequirement(name = "Bearer Authentication")
 public class AuthController {
 
 	private final AuthService authService;
