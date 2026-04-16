@@ -21,6 +21,7 @@ public class BookingService {
     private final ReservaRepository reservaRepository;
     private final ReservaHabitacionRepository reservaHabitacionRepository;
     private final ReservaAreaRepository reservaAreaRepository;
+    private final CatalogRepository catalogRepository;
 
     public BookingService(ReservaRepository reservaRepository,
                           ReservaHabitacionRepository reservaHabitacionRepository,
@@ -29,6 +30,7 @@ public class BookingService {
         this.reservaRepository = reservaRepository;
         this.reservaHabitacionRepository = reservaHabitacionRepository;
         this.reservaAreaRepository = reservaAreaRepository;
+        this.catalogRepository = catalogRepository;
     }
 
     /**
@@ -91,10 +93,27 @@ public class BookingService {
     // =================================================================================
 
     private void validarDisponibilidad(CreateBookingRequest request) {
-        // Aquí usaríamos el catalogRepository para llamar a las funciones SQL
-        // fn_buscar_habitaciones_disponibles o fn_buscar_areas_disponibles
-        // y verificar que el request.itemId() esté en la lista de resultados.
-        // Por simplicidad en este paso, asumimos que está disponible.
+        if ("Habitacion".equalsIgnoreCase(request.tipoReserva())) {
+            // Consultamos la función SQL a través del repositorio
+            boolean disponible = catalogRepository.findAvailableRooms(
+                    request.fechaInicio(), request.fechaFin(),
+                    request.numeroAdultos(), request.numeroNinos(), null
+            ).stream().anyMatch(room -> room.getIdHabitacion().equals(request.itemId()));
+
+            if (!disponible) {
+                throw new RuntimeException("La habitación seleccionada no está disponible en esas fechas.");
+            }
+        } else {
+            // Consultamos la función SQL para áreas
+            boolean disponible = catalogRepository.findAvailableAreas(
+                    request.fechaInicio(), request.horaInicio(), request.horaFin(),
+                    request.numeroAdultos(), null
+            ).stream().anyMatch(area -> area.getIdArea().equals(request.itemId()));
+
+            if (!disponible) {
+                throw new RuntimeException("El área seleccionada no está disponible en ese horario.");
+            }
+        }
     }
 
     private void guardarDetalleHabitacion(CreateBookingRequest request, Integer idReserva) {
