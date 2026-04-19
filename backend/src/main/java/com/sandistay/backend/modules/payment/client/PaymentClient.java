@@ -25,9 +25,9 @@ public class PaymentClient {
     /**
      * Inyectamos el Builder de RestClient (provisto por Spring Boot) y la URL desde application.yml.
      */
-    public PaymentClient(RestClient.Builder restClientBuilder,
-                         @Value("${integration.payment.url}") String paymentMockUrl) {
-        this.restClient = restClientBuilder.build();
+    public PaymentClient(@Value("${integration.payment.url}") String paymentMockUrl) {
+        // Instanciamos el RestClient directamente sin pedirle el Builder a Spring
+        this.restClient = RestClient.create(); 
         this.paymentMockUrl = paymentMockUrl;
     }
 

@@ -6,7 +6,6 @@ import com.sandistay.backend.modules.rooms.model.RoomAvailabilityProjection;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.Repository;
 import org.springframework.data.repository.query.Param;
-
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.util.List;

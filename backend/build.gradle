@@ -34,6 +34,8 @@ dependencies {
     runtimeOnly 'io.jsonwebtoken:jjwt-jackson:0.12.5'
     // Documentación OpenAPI (Swagger UI)
     implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:2.8.6'
+    // Motor de Reportes (Generación de PDFs)
+    implementation 'net.sf.jasperreports:jasperreports:6.21.3'
 }
 
 tasks.named('test') {
