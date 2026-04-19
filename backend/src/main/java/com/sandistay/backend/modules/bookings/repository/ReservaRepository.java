@@ -3,10 +3,13 @@ package com.sandistay.backend.modules.bookings.repository;
 import com.sandistay.backend.modules.bookings.model.Reserva;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
+import org.springframework.data.jpa.repository.Modifying;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
 import java.util.Optional;
 
-@Repository
+@Repository 
 public interface ReservaRepository extends JpaRepository<Reserva, Integer> {
 
     /**
@@ -20,4 +23,16 @@ public interface ReservaRepository extends JpaRepository<Reserva, Integer> {
      * Útil para generar códigos únicos sin colisiones.
      */
     boolean existsByCodigoReserva(String codigoReserva);
+    
+    /**
+     * Llama al Procedimiento Almacenado de PostgreSQL para cancelar la reserva
+     * y liberar el inventario de forma segura.
+     */
+    @Modifying
+    @Query(value = "CALL sp_cancelar_reserva(:idReserva, :motivo, :idUsuario)", nativeQuery = true)
+    void llamarSpCancelarReserva(
+            @Param("idReserva") Integer idReserva,
+            @Param("motivo") String motivo,
+            @Param("idUsuario") Integer idUsuario
+    );
 }

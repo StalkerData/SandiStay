@@ -29,7 +29,10 @@ public class Rol {
 	// ==========================================
 	public Rol() {
 	}
-
+	
+	// ==========================================
+	// GETTERS Y SETTERS
+	// ==========================================
 	public Rol(String codigo, String nombre) {
 		this.codigo = codigo;
 		this.nombre = nombre;

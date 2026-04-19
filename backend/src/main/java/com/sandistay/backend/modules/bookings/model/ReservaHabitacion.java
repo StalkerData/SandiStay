@@ -44,7 +44,7 @@ public class ReservaHabitacion {
     // ==========================================
     public ReservaHabitacion() {}
      // ==========================================
-    // GENERAR GETTERS Y SETTERS CON EL IDE AQUÍ
+    // GETTERS Y SETTERS
     // ==========================================
 
 	public Integer getIdReservaHabitacion() {

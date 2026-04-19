@@ -65,7 +65,7 @@ public class Reserva {
 	}
 
 	// ==========================================
-	// GENERAR GETTERS Y SETTERS CON EL IDE AQUÍ
+	// GETTERS Y SETTERS 
 	// ==========================================
 
 	public Integer getIdReserva() {

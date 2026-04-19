@@ -10,12 +10,8 @@ spring:
     driver-class-name: org.postgresql.Driver
 
   jpa:
-    # ¡CRÍTICO! Como ya creamos las tablas con SQL_Files, le decimos a Hibernate 
-    # que NO intente crear ni borrar tablas, solo que valide que existan.
     hibernate:
       ddl-auto: validate
-    
-    # Mostrar el SQL en la consola para depurar
     show-sql: true
     properties:
       hibernate:
@@ -28,14 +24,13 @@ server:
   servlet:
     context-path: /api/v1
 
-# ==========================================
 # Configuración de Seguridad y JWT
-# ==========================================
 security:
   jwt:
-    # TRUCO SENIOR: Intenta leer la variable de entorno JWT_SECRET (para Producción en Docker).
-    # Si no existe (como en tu entorno local), usa el valor por defecto después de los dos puntos (:).
-    # Esta clave es "SandiStaySecretKeyParaFirmaDeTokens2026!" codificada en Base64 (cumple los 256 bits).
     secret-key: ${JWT_SECRET:U2FuZGlTdGF5U2VjcmV0S2V5UGFyYUZpcm1hRGVUb2tlbnMyMDI2IQ==}
-    # Tiempo de expiración: 24 horas en milisegundos (1000 * 60 * 60 * 24)
     expiration-time: 86400000
+
+# Integraciones Externas (APIs)
+integration:
+  payment:
+    url: ${PAYMENT_MOCK_URL:https://mocki.io/v1/04ec3462-a56e-4fe8-a724-952c5349d55d}

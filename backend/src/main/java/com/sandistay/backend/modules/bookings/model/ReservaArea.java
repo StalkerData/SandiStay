@@ -52,7 +52,7 @@ public class ReservaArea {
     public ReservaArea() {}
     
      // ==========================================
-    // GENERAR GETTERS Y SETTERS CON EL IDE AQUÍ
+    // GETTERS Y SETTERS
     // ==========================================
     
 

@@ -1,6 +1,8 @@
 package com.sandistay.backend.modules.bookings.controller;
 
 import com.sandistay.backend.modules.bookings.dto.BookingResponse;
+import com.sandistay.backend.modules.bookings.dto.CancelBookingRequest;
+import com.sandistay.backend.modules.bookings.dto.CancelBookingResponse;
 import com.sandistay.backend.modules.bookings.dto.CreateBookingRequest;
 import com.sandistay.backend.modules.bookings.service.BookingService;
 import jakarta.validation.Valid;
@@ -65,5 +67,31 @@ public class BookingController {
         // Si es un Guest Checkout desde la web pública, asignamos el ID del usuario "Sistema" o "Web"
         // Asumimos que el ID 1 es el Admin/Sistema según nuestro seed_data.sql
         return 1; 
+    }
+    
+    /**
+     * Endpoint protegido para cancelar una reserva existente.
+     * Aplica las políticas de penalidad y genera los registros de reembolso correspondientes.
+     * 
+     * @param id El ID interno de la reserva a cancelar.
+     * @param request El payload JSON con el motivo de la cancelación.
+     * @param authentication Inyectado por Spring Security (requiere estar logueado).
+     * @return CancelBookingResponse con el desglose financiero de la operación.
+     */
+    @PatchMapping("/{id}/cancel")
+    public ResponseEntity<CancelBookingResponse> cancelBooking(
+            @PathVariable Integer id,
+            @Valid @RequestBody CancelBookingRequest request,
+            Authentication authentication) {
+
+        // 1. Extraer el ID del usuario que ejecuta la cancelación (Staff)
+        // A diferencia de la creación, la cancelación SIEMPRE requiere un usuario autenticado.
+        Integer idUsuarioActual = obtenerIdUsuario(authentication);
+
+        // 2. Delegar la lógica financiera y operativa al servicio
+        CancelBookingResponse response = bookingService.cancelBooking(id, request, idUsuarioActual);
+
+        // 3. Retornar 200 OK con el resumen de la operación
+        return ResponseEntity.ok(response);
     }
 }
