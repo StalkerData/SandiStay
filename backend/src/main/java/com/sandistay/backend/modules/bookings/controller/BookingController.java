@@ -5,6 +5,8 @@ import com.sandistay.backend.modules.bookings.dto.CancelBookingRequest;
 import com.sandistay.backend.modules.bookings.dto.CancelBookingResponse;
 import com.sandistay.backend.modules.bookings.dto.CreateBookingRequest;
 import com.sandistay.backend.modules.bookings.service.BookingService;
+
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -13,6 +15,7 @@ import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/bookings")
+@SecurityRequirement(name = "Bearer Authentication")
 public class BookingController {
 
     private final BookingService bookingService;

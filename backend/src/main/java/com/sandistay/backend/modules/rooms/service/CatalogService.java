@@ -3,6 +3,7 @@ package com.sandistay.backend.modules.rooms.service;
 import com.sandistay.backend.modules.rooms.dto.CatalogAreaResponse;
 import com.sandistay.backend.modules.rooms.dto.CatalogRoomResponse;
 import com.sandistay.backend.modules.rooms.model.AreaAvailabilityProjection;
+import com.sandistay.backend.modules.rooms.model.HabitacionView;
 import com.sandistay.backend.modules.rooms.model.RoomAvailabilityProjection;
 import com.sandistay.backend.modules.rooms.repository.CatalogRepository;
 import org.springframework.stereotype.Service;
@@ -89,5 +90,32 @@ public class CatalogService {
                     imagenPrincipal
             );
         }).collect(Collectors.toList());
+    }
+    
+    /**
+     * Obtiene el detalle de una habitación específica.
+     */
+    public CatalogRoomResponse getRoomDetails(Integer id) {
+        // 1. Buscamos en la vista SQL
+        HabitacionView view = catalogRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Habitación no encontrada en el catálogo."));
+
+        // 2. Construimos la ruta de la imagen
+        String imagenPrincipal = "/uploads/Habitaciones/" + view.getCodigo() + "/" + view.getCodigo() + "_1.jpg";
+
+        // 3. Mapeamos al DTO
+        return new CatalogRoomResponse(
+                view.getIdHabitacion(),
+                view.getCodigo(),
+                view.getNumero(),
+                view.getNombre(),
+                view.getTipoHabitacion(),
+                view.getCapacidadAdultos(),
+                view.getCapacidadNinos(),
+                view.getPrecioNoche(),
+                view.getPrecioDia(),
+                view.getDescripcion(),
+                imagenPrincipal
+        );
     }
 }

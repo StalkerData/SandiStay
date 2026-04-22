@@ -92,6 +92,24 @@ public class BookingService {
         } else {
             guardarDetalleArea(request, reserva.getIdReserva());
         }
+     // =========================================================
+        // NUEVO PASO 5.5: PERSISTENCIA DEL PAGO
+        // =========================================================
+        Pago pago = new Pago();
+        pago.setCodigoPago("PAG-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase());
+        pago.setIdReserva(reserva.getIdReserva());
+        
+        // Como los precios están fijos por ahora en los métodos de abajo, 
+        // guardamos un monto representativo para que la matemática de cancelación funcione.
+        pago.setMonto(new BigDecimal("400000.00")); 
+        
+        pago.setIdMetodoPago(2); // 2 = Nequi (Según nuestro seed_data.sql)
+        pago.setNumeroReferencia(request.paymentTxId());
+        pago.setIdEstadoPago(2); // 2 = APROBADO
+        pago.setIdUsuarioRegistro(idUsuarioActual);
+        pago.setObservaciones("Pago procesado y verificado automáticamente vía Mock.");
+        
+        pagoRepository.save(pago);
 
         // 6. NOTIFICACIÓN ASÍNCRONA
         // TODO: Llamar a EmailService.sendConfirmationEmail(reserva.getEmailHuesped());

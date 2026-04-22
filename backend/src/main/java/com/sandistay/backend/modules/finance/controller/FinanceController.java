@@ -2,6 +2,8 @@ package com.sandistay.backend.modules.finance.controller;
 
 import com.sandistay.backend.modules.finance.dto.GenerateInvoiceRequest;
 import com.sandistay.backend.modules.finance.service.ReportService;
+
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
@@ -12,6 +14,7 @@ import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/finance")
+@SecurityRequirement(name = "Bearer Authentication") 
 public class FinanceController {
 
     private final ReportService reportService;
@@ -27,7 +30,7 @@ public class FinanceController {
      * @param authentication Inyectado por Spring Security (Usuario Staff).
      * @return Archivo binario (PDF) con código 201 Created.
      */
-    @PostMapping("/invoices/generate")
+    @PostMapping(value = "/invoices/generate", produces = MediaType.APPLICATION_PDF_VALUE)
     public ResponseEntity<byte[]> generateInvoicePdf(
             @Valid @RequestBody GenerateInvoiceRequest request,
             Authentication authentication) {

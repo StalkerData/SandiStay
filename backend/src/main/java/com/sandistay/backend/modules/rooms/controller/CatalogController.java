@@ -71,13 +71,10 @@ public class CatalogController {
 
     /**
      * Endpoint público para ver el detalle de una habitación específica.
-     * (Nota: La implementación completa de este método requeriría un método en el servicio 
-     * que consulte la vista HabitacionView por ID. Por ahora devolvemos un 501 Not Implemented 
-     * para mantener el foco en la búsqueda principal).
      */
     @GetMapping("/rooms/{id}")
     public ResponseEntity<CatalogRoomResponse> getRoomDetails(@PathVariable Integer id) {
-        // TODO: Implementar la consulta individual usando HabitacionView
-        return ResponseEntity.status(501).build();
+        CatalogRoomResponse room = catalogService.getRoomDetails(id);
+        return ResponseEntity.ok(room);
     }
 }

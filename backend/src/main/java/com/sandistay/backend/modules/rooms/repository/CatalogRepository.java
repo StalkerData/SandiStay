@@ -9,6 +9,7 @@ import org.springframework.data.repository.query.Param;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.util.List;
+import java.util.Optional;
 
 /**
  * Repositorio de solo lectura para el Catálogo.
@@ -54,4 +55,10 @@ public interface CatalogRepository extends Repository<HabitacionView, Integer> {
             @Param("capacidad") Integer capacidad,
             @Param("tipo") Integer tipo
     );
+    
+    /**
+     * Busca el detalle de una habitación específica usando la vista SQL.
+     */
+    Optional<HabitacionView> findById(Integer id);
+
 }

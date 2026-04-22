@@ -2,6 +2,7 @@ package com.sandistay.backend.modules.finance.service;
 
 import com.sandistay.backend.modules.finance.repository.FacturaRepository;
 import net.sf.jasperreports.engine.*;
+import org.springframework.jdbc.datasource.DataSourceUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.core.io.ClassPathResource;
@@ -71,14 +72,17 @@ public class ReportService {
             Map<String, Object> parametros = new HashMap<>();
             parametros.put("P_ID_FACTURA", idFactura);
 
-            // 4. Obtener una conexión real a Postgres para que Jasper ejecute su SQL interno
-            try (Connection connection = dataSource.getConnection()) {
-
-                // 5. "Llenar" el reporte: Jasper corre sus queries con la conexión + parámetros
+         // 4. Obtener la conexión TRANSACCIONAL actual de Spring (No una nueva)
+            Connection connection = DataSourceUtils.getConnection(dataSource);
+            try {
+                // 5. Llenar el reporte
                 JasperPrint jasperPrint = JasperFillManager.fillReport(jasperReport, parametros, connection);
 
-                // 6. Exportar el JasperPrint a bytes PDF
+                // 6. Exportar a PDF
                 return JasperExportManager.exportReportToPdf(jasperPrint);
+            } finally {
+                // Liberar la conexión de vuelta a Spring
+                DataSourceUtils.releaseConnection(connection, dataSource);
             }
 
         } catch (Exception e) {
