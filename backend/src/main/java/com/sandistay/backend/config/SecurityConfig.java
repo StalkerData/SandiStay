@@ -38,11 +38,14 @@ public class SecurityConfig {
 
 						// 2. Rutas del Catálogo (Públicas para que cualquiera pueda ver habitaciones)
 						.requestMatchers("/catalog/**").permitAll()
+						
+						// 3. Rutas de las imagenes (Públicas para que cualquiera pueda ver habitaciones)
+						.requestMatchers("/uploads/**").permitAll() 
 
-						// 3. Rutas de Documentación Swagger (Públicas)
+						// 4. Rutas de Documentación Swagger (Públicas)
 						.requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
 
-						// 4. Todo lo demás requiere token JWT válido
+						// 5. Todo lo demás requiere token JWT válido
 						.anyRequest().authenticated())
 				// AQUÍ ESTÁ LA MAGIA: Ponemos tu filtro ANTES del filtro estándar de Spring
 				.addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
