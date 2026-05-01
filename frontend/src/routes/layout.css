@@ -1,3 +1,38 @@
-@import 'tailwindcss';
+/* 1. Importamos las fuentes de Google Fonts PRIMERO (Regla estricta de CSS) */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Playfair+Display:wght@400;600;700&display=swap');
+
+/* 2. Importamos Tailwind v4 y sus plugins DESPUÉS */
+@import "tailwindcss";
 @plugin '@tailwindcss/forms';
 @plugin '@tailwindcss/typography';
+
+/* 3. Configuramos nuestro Sistema de Diseño (Design System) */
+@theme {
+  /* Tipografías */
+  --font-sans: 'Inter', sans-serif;
+  --font-serif: 'Playfair Display', serif;
+
+  /* Paleta de Colores SandiStay */
+  --color-primary: #FF4D00;       /* Naranja cálido (Botones CTA) */
+  --color-secondary: #319190;     /* Teal elegante (Color firma del hotel) */
+  --color-accent: #E8B923;        /* Dorado suave (Detalles premium) */
+  --color-base: #FFF8E8;          /* Crema cálido (Fondo principal) */
+  --color-surface: #FFFFFF;       /* Blanco puro (Para tarjetas sobre el fondo crema) */
+  --color-dark: #260D0D;          /* Marrón oscuro (Textos principales) */
+  --color-neutral: #4A3F35;       /* Gris cálido (Textos secundarios) */
+}
+
+/* 4. Estilos Base Globales */
+@layer base {
+  body {
+    background-color: var(--color-base);
+    color: var(--color-dark);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    font-family: var(--font-serif);
+    color: var(--color-secondary);
+  }
+}
