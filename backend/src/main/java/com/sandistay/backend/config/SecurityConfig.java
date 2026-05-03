@@ -32,20 +32,14 @@ public class SecurityConfig {
 	SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
 		http.cors(cors -> cors.configurationSource(corsConfigurationSource())).csrf(csrf -> csrf.disable())
 				.sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-				.authorizeHttpRequests(auth -> auth
-						// 1. Rutas de Autenticación (Públicas)
-						.requestMatchers("/auth/login").permitAll()
-
-						// 2. Rutas del Catálogo (Públicas para que cualquiera pueda ver habitaciones)
-						.requestMatchers("/catalog/**").permitAll()
-						
-						// 3. Rutas de las imagenes (Públicas para que cualquiera pueda ver habitaciones)
-						.requestMatchers("/uploads/**").permitAll() 
-
-						// 4. Rutas de Documentación Swagger (Públicas)
+				.authorizeHttpRequests(auth -> auth.requestMatchers("/auth/login").permitAll()
+						.requestMatchers("/catalog/**").permitAll().requestMatchers("/uploads/**").permitAll()
 						.requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
 
-						// 5. Todo lo demás requiere token JWT válido
+						// NUEVA LÍNEA: Permitir que cualquiera cree una reserva (Guest Checkout)
+						.requestMatchers(org.springframework.http.HttpMethod.POST, "/bookings").permitAll()
+
+						// Todo lo demás (como cancelar o ver reportes) requiere token
 						.anyRequest().authenticated())
 				// AQUÍ ESTÁ LA MAGIA: Ponemos tu filtro ANTES del filtro estándar de Spring
 				.addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
