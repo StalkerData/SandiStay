@@ -30,11 +30,6 @@
 				<a href="/areas" class="font-medium text-neutral transition-colors hover:text-secondary"
 					>Áreas Sociales</a
 				>
-
-				<!-- Botón de Login usando nuestro componente atómico -->
-				<a href="/login">
-					<Button variant="primary">Iniciar Sesión</Button>
-				</a>
 			</div>
 
 			<!-- Botón Menú Móvil (Hamburguesa) - Solo visual por ahora -->

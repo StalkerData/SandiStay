@@ -40,12 +40,12 @@ public class GlobalExceptionHandler {
 	@ExceptionHandler(Exception.class)
 	public ResponseEntity<ErrorResponse> handleGlobalException(Exception ex, HttpServletRequest request) {
 
-		// NOTA DE SEGURIDAD: En producción estricta, no se envía ex.getMessage()
-		// al cliente para no revelar detalles internos de la BD o el código.
-		// Por ahora lo dejamos para facilitar la depuración en desarrollo.
-		// Hay que esperar a produccion para eliminar el ex.getMessage()
+		// Logueamos el error real en el servidor
+		System.err.println("Error Crítico: " + ex.getMessage());
+
 		ErrorResponse errorResponse = new ErrorResponse(LocalDateTime.now(), HttpStatus.INTERNAL_SERVER_ERROR.value(),
-				"Internal Server Error", ex.getMessage(), request.getRequestURI());
+				"Internal Server Error", "Ocurrió un error interno en el servidor. Por favor, intenta más tarde.",
+				request.getRequestURI());
 
 		return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse);
 	}
@@ -62,6 +62,26 @@ public class GlobalExceptionHandler {
 				"Unauthorized", "Usuario o contraseña incorrectos", request.getRequestURI());
 
 		return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(errorResponse);
+	}
+
+	/**
+	 * 4. Maneja errores de Integridad de Datos (Constraints de PostgreSQL,
+	 * Triggers, Overbooking). Devuelve un 409 Conflict ocultando el SQL real por
+	 * seguridad.
+	 */
+	@ExceptionHandler(org.springframework.dao.DataIntegrityViolationException.class)
+	public ResponseEntity<ErrorResponse> handleDataIntegrityViolation(
+			org.springframework.dao.DataIntegrityViolationException ex, HttpServletRequest request) {
+
+		// Imprimimos el error real en la consola del servidor para el DevOps
+		System.err.println("Data Integrity Error: " + ex.getMessage());
+
+		// Le devolvemos al Frontend un mensaje limpio y seguro
+		ErrorResponse errorResponse = new ErrorResponse(LocalDateTime.now(), HttpStatus.CONFLICT.value(), "Conflict",
+				"Las fechas seleccionadas ya están ocupadas o no cumplen con las reglas del hotel (ej. mínimo 1 noche).",
+				request.getRequestURI());
+
+		return ResponseEntity.status(HttpStatus.CONFLICT).body(errorResponse);
 	}
 
 	// Más adelante agregaremos manejadores personalizados aquí
