@@ -3,7 +3,13 @@
 declare global {
 	namespace App {
 		// interface Error {}
-		// interface Locals {}
+		
+		// Definimos las variables globales que inyecta nuestro hooks.server.ts
+		interface Locals {
+			token?: string;
+			userRole?: string;
+		}
+		
 		// interface PageData {}
 		// interface PageState {}
 		// interface Platform {}
