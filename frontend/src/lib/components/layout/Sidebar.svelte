@@ -33,16 +33,32 @@
         {/each}
     </nav>
 
-    <!-- Pie del Sidebar (Usuario actual) -->
+<!-- Pie del Sidebar (Usuario actual y Logout) -->
     <div class="p-4 border-t border-base/10">
-        <div class="flex items-center gap-3">
-            <div class="w-8 h-8 rounded-full bg-primary flex items-center justify-center text-white font-bold">
-                A
+        <div class="flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <div class="w-8 h-8 rounded-full bg-primary flex items-center justify-center text-white font-bold">
+                    A
+                </div>
+                <div class="flex flex-col">
+                    <span class="text-sm font-bold text-white">Admin</span>
+                    <span class="text-xs text-base/50">En línea</span>
+                </div>
             </div>
-            <div class="flex flex-col">
-                <span class="text-sm font-bold text-white">Admin</span>
-                <span class="text-xs text-base/50">Cerrar Sesión</span>
-            </div>
+            
+            <!-- Formulario de Logout usando Server Actions -->
+            <form method="POST" action="/dashboard?/logout">
+                <button 
+                    type="submit" 
+                    class="text-base/50 hover:text-primary transition-colors p-2 rounded-md hover:bg-base/10"
+                    title="Cerrar Sesión"
+                >
+                    <!-- Icono de Logout -->
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                    </svg>
+                </button>
+            </form>
         </div>
     </div>
 </aside>

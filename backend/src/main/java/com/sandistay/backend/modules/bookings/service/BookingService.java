@@ -8,6 +8,7 @@ import com.sandistay.backend.modules.bookings.model.ReservaHabitacion;
 import com.sandistay.backend.modules.bookings.repository.ReservaAreaRepository;
 import com.sandistay.backend.modules.bookings.repository.ReservaHabitacionRepository;
 import com.sandistay.backend.modules.bookings.repository.ReservaRepository;
+import com.sandistay.backend.modules.bookings.repository.ReservaViewRepository;
 import com.sandistay.backend.modules.rooms.repository.CatalogRepository;
 import com.sandistay.backend.modules.payment.repository.PagoRepository;
 import com.sandistay.backend.modules.payment.client.PaymentClient;
@@ -31,6 +32,7 @@ public class BookingService {
     private final CatalogRepository catalogRepository;
     private final PagoRepository pagoRepository;
     private final PaymentClient paymentClient; 
+    private final ReservaViewRepository reservaViewRepository;
 
 
     public BookingService(ReservaRepository reservaRepository,
@@ -38,13 +40,15 @@ public class BookingService {
             ReservaAreaRepository reservaAreaRepository,
             CatalogRepository catalogRepository,
             PagoRepository pagoRepository,
-            PaymentClient paymentClient) { 
+            PaymentClient paymentClient,
+            ReservaViewRepository reservaViewRepository) { 
 		this.reservaRepository = reservaRepository;
 		this.reservaHabitacionRepository = reservaHabitacionRepository;
 		this.reservaAreaRepository = reservaAreaRepository;
 		this.catalogRepository = catalogRepository;
 		this.pagoRepository = pagoRepository;
 		this.paymentClient = paymentClient;
+		this.reservaViewRepository = reservaViewRepository;
 		}
 
     /**
@@ -301,7 +305,14 @@ public class BookingService {
                 montoReembolso,
                 "Reserva cancelada exitosamente. Inventario liberado."
         );
+        
     }
     
+    /**
+     * Obtiene todas las reservas usando la vista optimizada de PostgreSQL.
+     */
+    public List<com.sandistay.backend.modules.bookings.model.ReservaView> getAllBookings() {
+        return reservaViewRepository.findAllByOrderByFechaReservaDesc();
+    }
     
 }

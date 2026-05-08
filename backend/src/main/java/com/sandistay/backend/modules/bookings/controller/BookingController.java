@@ -5,13 +5,14 @@ import com.sandistay.backend.modules.bookings.dto.CancelBookingRequest;
 import com.sandistay.backend.modules.bookings.dto.CancelBookingResponse;
 import com.sandistay.backend.modules.bookings.dto.CreateBookingRequest;
 import com.sandistay.backend.modules.bookings.service.BookingService;
-
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import jakarta.validation.Valid;
+import java.util.List;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
+import com.sandistay.backend.modules.bookings.model.ReservaView;
 
 @RestController
 @RequestMapping("/bookings")
@@ -96,5 +97,14 @@ public class BookingController {
 
         // 3. Retornar 200 OK con el resumen de la operación
         return ResponseEntity.ok(response);
+    }
+    
+    /**
+     * Endpoint protegido para listar todas las reservas en el Dashboard.
+     */
+    @GetMapping
+    public ResponseEntity<List<ReservaView>> getAllBookings() {
+        List<ReservaView> reservas = bookingService.getAllBookings();
+        return ResponseEntity.ok(reservas);
     }
 }
