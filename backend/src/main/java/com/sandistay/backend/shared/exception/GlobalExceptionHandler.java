@@ -83,6 +83,37 @@ public class GlobalExceptionHandler {
 
 		return ResponseEntity.status(HttpStatus.CONFLICT).body(errorResponse);
 	}
+	
+	/**
+     * 5. Maneja excepciones lanzadas intencionalmente desde Procedimientos Almacenados (RAISE EXCEPTION).
+     * Extrae el mensaje de negocio (ej: "Saldo pendiente") y lo devuelve como un 400 Bad Request.
+     */
+    @ExceptionHandler(org.springframework.dao.DataAccessException.class)
+    public ResponseEntity<ErrorResponse> handleDataAccessException(
+            org.springframework.dao.DataAccessException ex, 
+            HttpServletRequest request) {
+        
+        String mensajeUsuario = "Error al procesar la operación en la base de datos.";
+        
+        // Si el error viene de un RAISE EXCEPTION de Postgres, extraemos el mensaje útil
+        if (ex.getCause() != null && ex.getCause().getCause() != null) {
+            String mensajeSql = ex.getCause().getCause().getMessage();
+            if (mensajeSql != null && mensajeSql.contains("ERROR:")) {
+                // Limpiamos el mensaje (quitamos el "ERROR: " del principio)
+                mensajeUsuario = mensajeSql.split("\n")[0].replace("ERROR: ", "").trim();
+            }
+        }
+
+        ErrorResponse errorResponse = new ErrorResponse(
+                LocalDateTime.now(),
+                HttpStatus.BAD_REQUEST.value(),
+                "Business Rule Violation",
+                mensajeUsuario,
+                request.getRequestURI()
+        );
+        
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorResponse);
+    }
 
 	// Más adelante agregaremos manejadores personalizados aquí
 	// Como (Ej: ReservaNotFoundException, PagoRechazadoException)

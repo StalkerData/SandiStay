@@ -12,6 +12,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
+
+import com.sandistay.backend.modules.bookings.model.ReservaHabitacionView;
 import com.sandistay.backend.modules.bookings.model.ReservaView;
 
 @RestController
@@ -106,5 +108,36 @@ public class BookingController {
     public ResponseEntity<List<ReservaView>> getAllBookings() {
         List<ReservaView> reservas = bookingService.getAllBookings();
         return ResponseEntity.ok(reservas);
+    }
+    
+    /**
+     * Endpoint protegido para ver el detalle de las habitaciones de una reserva.
+     */
+    @GetMapping("/{id}/details/rooms")
+    public ResponseEntity<List<ReservaHabitacionView>> getBookingRoomDetails(@PathVariable Integer id) {
+        List<ReservaHabitacionView> detalles = bookingService.getDetallesHabitacion(id);
+        return ResponseEntity.ok(detalles);
+    }
+    
+    
+    /**
+     * Endpoint protegido para realizar el Check-out de una reserva.
+     * 
+     * @param id El ID interno de la reserva.
+     * @param authentication Inyectado por Spring Security (Usuario Staff).
+     */
+    @PostMapping("/{id}/checkout")
+    public ResponseEntity<BookingResponse> checkoutBooking(
+            @PathVariable Integer id,
+            Authentication authentication) {
+
+        // Extraemos el ID del usuario que ejecuta la acción (Staff)
+        Integer idUsuarioActual = obtenerIdUsuario(authentication);
+
+        // Delegamos al servicio
+        BookingResponse response = bookingService.checkout(id, idUsuarioActual);
+
+        // Retornamos 200 OK
+        return ResponseEntity.ok(response);
     }
 }

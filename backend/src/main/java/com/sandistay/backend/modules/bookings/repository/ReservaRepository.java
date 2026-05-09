@@ -35,4 +35,14 @@ public interface ReservaRepository extends JpaRepository<Reserva, Integer> {
             @Param("motivo") String motivo,
             @Param("idUsuario") Integer idUsuario
     );
+    /**
+     * Llama al Procedimiento Almacenado de PostgreSQL para realizar el Check-out.
+     * Valida que el saldo sea 0 y cambia el estado de la habitación a Limpieza.
+     */
+    @Modifying
+    @Query(value = "CALL sp_completar_reserva(:idReserva, :idUsuario)", nativeQuery = true)
+    void llamarSpCompletarReserva(
+            @Param("idReserva") Integer idReserva,
+            @Param("idUsuario") Integer idUsuario
+    );
 }

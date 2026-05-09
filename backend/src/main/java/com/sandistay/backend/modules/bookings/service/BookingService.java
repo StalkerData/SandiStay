@@ -7,6 +7,7 @@ import com.sandistay.backend.modules.bookings.model.ReservaArea;
 import com.sandistay.backend.modules.bookings.model.ReservaHabitacion;
 import com.sandistay.backend.modules.bookings.repository.ReservaAreaRepository;
 import com.sandistay.backend.modules.bookings.repository.ReservaHabitacionRepository;
+import com.sandistay.backend.modules.bookings.repository.ReservaHabitacionViewRepository;
 import com.sandistay.backend.modules.bookings.repository.ReservaRepository;
 import com.sandistay.backend.modules.bookings.repository.ReservaViewRepository;
 import com.sandistay.backend.modules.rooms.repository.CatalogRepository;
@@ -33,6 +34,7 @@ public class BookingService {
     private final PagoRepository pagoRepository;
     private final PaymentClient paymentClient; 
     private final ReservaViewRepository reservaViewRepository;
+    private final ReservaHabitacionViewRepository reservaHabitacionViewRepository;
 
 
     public BookingService(ReservaRepository reservaRepository,
@@ -41,7 +43,8 @@ public class BookingService {
             CatalogRepository catalogRepository,
             PagoRepository pagoRepository,
             PaymentClient paymentClient,
-            ReservaViewRepository reservaViewRepository) { 
+            ReservaViewRepository reservaViewRepository,
+            ReservaHabitacionViewRepository reservaHabitacionViewRepository) { 
 		this.reservaRepository = reservaRepository;
 		this.reservaHabitacionRepository = reservaHabitacionRepository;
 		this.reservaAreaRepository = reservaAreaRepository;
@@ -49,6 +52,7 @@ public class BookingService {
 		this.pagoRepository = pagoRepository;
 		this.paymentClient = paymentClient;
 		this.reservaViewRepository = reservaViewRepository;
+		this.reservaHabitacionViewRepository = reservaHabitacionViewRepository;
 		}
 
     /**
@@ -313,6 +317,36 @@ public class BookingService {
      */
     public List<com.sandistay.backend.modules.bookings.model.ReservaView> getAllBookings() {
         return reservaViewRepository.findAllByOrderByFechaReservaDesc();
+    }
+    
+    /**
+     * Obtiene los detalles de las habitaciones de una reserva usando la vista SQL.
+     */
+    public List<com.sandistay.backend.modules.bookings.model.ReservaHabitacionView> getDetallesHabitacion(Integer idReserva) {
+        return reservaHabitacionViewRepository.findByIdReserva(idReserva);
+    }
+    
+    /**
+     * Ejecuta el proceso de Check-out delegando la validación financiera a PostgreSQL.
+     */
+    @Transactional
+    public BookingResponse checkout(Integer idReserva, Integer idUsuarioActual) {
+        
+        // 1. Validar que la reserva exista
+        Reserva reserva = reservaRepository.findById(idReserva)
+                .orElseThrow(() -> new RuntimeException("Reserva no encontrada"));
+
+        // 2. Llamar al Procedimiento Almacenado
+        // Si el cliente tiene saldo pendiente, Postgres lanzará un RAISE EXCEPTION
+        // que Spring Boot atrapará y convertirá en un error HTTP automáticamente.
+        reservaRepository.llamarSpCompletarReserva(idReserva, idUsuarioActual);
+
+        // 3. Retornar respuesta de éxito
+        return new BookingResponse(
+                reserva.getCodigoReserva(),
+                "COMPLETADA",
+                "Check-out realizado exitosamente. Habitación enviada a limpieza."
+        );
     }
     
 }
