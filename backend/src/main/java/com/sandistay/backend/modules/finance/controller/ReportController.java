@@ -1,5 +1,6 @@
 package com.sandistay.backend.modules.finance.controller;
 
+import com.sandistay.backend.modules.finance.model.HistorialClienteProjection;
 import com.sandistay.backend.modules.finance.model.OcupacionProjection;
 import com.sandistay.backend.modules.finance.service.ReportService;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
@@ -32,4 +33,13 @@ public class ReportController {
 		List<OcupacionProjection> report = reportService.getOccupancyReport(start, end);
 		return ResponseEntity.ok(report);
 	}
+	
+	/**
+     * Endpoint protegido para consultar el historial de un cliente (CRM).
+     */
+    @GetMapping("/clients/{id}/history")
+    public ResponseEntity<HistorialClienteProjection> getClientHistory(@PathVariable Integer id) {
+        HistorialClienteProjection history = reportService.getClientHistory(id);
+        return ResponseEntity.ok(history);
+    }
 }

@@ -9,6 +9,8 @@ import org.slf4j.LoggerFactory;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import com.sandistay.backend.modules.finance.model.HistorialClienteProjection;
 import com.sandistay.backend.modules.finance.model.OcupacionProjection;
 import java.time.LocalDate;
 import java.util.List;
@@ -112,4 +114,17 @@ public class ReportService {
 
 		return reportRepository.getReporteOcupacion(fechaInicio, fechaFin);
 	}
+	
+	/**
+     * Obtiene el historial CRM de un cliente delegando a PostgreSQL.
+     */
+    public HistorialClienteProjection getClientHistory(Integer idCliente) {
+        HistorialClienteProjection historial = reportRepository.getHistorialCliente(idCliente);
+        
+        if (historial == null) {
+            throw new RuntimeException("No se encontró historial para el cliente especificado.");
+        }
+        
+        return historial;
+    }
 }
