@@ -1,5 +1,6 @@
 package com.sandistay.backend.modules.bookings.controller;
 
+import com.sandistay.backend.modules.bookings.dto.BookingDetailResponse;
 import com.sandistay.backend.modules.bookings.dto.BookingResponse;
 import com.sandistay.backend.modules.bookings.dto.CancelBookingRequest;
 import com.sandistay.backend.modules.bookings.dto.CancelBookingResponse;
@@ -138,6 +139,15 @@ public class BookingController {
         BookingResponse response = bookingService.checkout(id, idUsuarioActual);
 
         // Retornamos 200 OK
+        return ResponseEntity.ok(response);
+    }
+    
+    /**
+     * Endpoint protegido para ver el detalle completo de una reserva (Cabecera, Ítems y Pagos).
+     */
+    @GetMapping("/{id}")
+    public ResponseEntity<BookingDetailResponse> getBookingFullDetails(@PathVariable Integer id) {
+        BookingDetailResponse response = bookingService.getBookingFullDetails(id);
         return ResponseEntity.ok(response);
     }
 }

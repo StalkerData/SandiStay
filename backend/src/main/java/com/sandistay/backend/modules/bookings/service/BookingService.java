@@ -1,10 +1,13 @@
 package com.sandistay.backend.modules.bookings.service;
 
+import com.sandistay.backend.modules.bookings.dto.BookingDetailResponse;
 import com.sandistay.backend.modules.bookings.dto.BookingResponse;
 import com.sandistay.backend.modules.bookings.dto.CreateBookingRequest;
 import com.sandistay.backend.modules.bookings.model.Reserva;
 import com.sandistay.backend.modules.bookings.model.ReservaArea;
 import com.sandistay.backend.modules.bookings.model.ReservaHabitacion;
+import com.sandistay.backend.modules.bookings.model.ReservaHabitacionView;
+import com.sandistay.backend.modules.bookings.model.ReservaView;
 import com.sandistay.backend.modules.bookings.repository.ReservaAreaRepository;
 import com.sandistay.backend.modules.bookings.repository.ReservaHabitacionRepository;
 import com.sandistay.backend.modules.bookings.repository.ReservaHabitacionViewRepository;
@@ -347,6 +350,25 @@ public class BookingService {
                 "COMPLETADA",
                 "Check-out realizado exitosamente. Habitación enviada a limpieza."
         );
+    }
+    
+    /**
+     * Obtiene el detalle completo de una reserva agrupando cabecera, ítems y pagos.
+     */
+    public BookingDetailResponse getBookingFullDetails(Integer idReserva) {
+        
+        // 1. Buscar la cabecera (Directo a la BD, mucho más rápido y eficiente)
+        ReservaView reserva = reservaViewRepository.findById(idReserva)
+                .orElseThrow(() -> new RuntimeException("Reserva no encontrada"));
+
+        // 2. Buscar los ítems (Habitaciones)
+        List<ReservaHabitacionView> items = reservaHabitacionViewRepository.findByIdReserva(idReserva);
+
+        // 3. Buscar los pagos asociados
+        List<Pago> pagos = pagoRepository.findByIdReserva(idReserva);
+
+        // 4. Empaquetar y retornar
+        return new BookingDetailResponse(reserva, items, pagos);
     }
     
 }

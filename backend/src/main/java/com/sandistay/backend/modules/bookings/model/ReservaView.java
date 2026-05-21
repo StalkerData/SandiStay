@@ -37,6 +37,7 @@ public class ReservaView {
     private String estadoColor;
 
     // Getters básicos que necesita SvelteKit
+    public Integer getIdReserva() { return idReserva; }
     public String getCodigoReserva() { return codigoReserva; }
     public String getTipoReserva() { return tipoReserva; }
     public String getNombreCliente() { return nombreCliente; }
