@@ -1,8 +1,9 @@
-import type { PageServerLoad } from './$types';
-import { error, redirect } from '@sveltejs/kit';
+import { error, fail, redirect } from '@sveltejs/kit';
+import type { Actions, PageServerLoad } from './$types';
 
-// Definimos la interfaz basada en la vista 'v_reservas_completo' de nuestra BD
+// Agregamos idReserva a la interfaz
 export interface ReservaResumen {
+    idReserva: number; 
     codigoReserva: string;
     tipoReserva: string;
     nombreCliente: string;
@@ -13,17 +14,10 @@ export interface ReservaResumen {
 }
 
 export const load: PageServerLoad = async ({ fetch, locals }) => {
-    
-    // 1. Extraemos el token que nuestro Guardián (hooks.server.ts) guardó en locals
     const token = locals.token;
-
-    if (!token) {
-        // Por seguridad extra, si no hay token, lanzamos error (aunque el hook ya debería haberlo evitado)
-        error(401, 'No autorizado');
-    }
+    if (!token) error(401, 'No autorizado');
 
     try {
-        // 2. Hacemos la petición a Spring Boot ENVIANDO EL TOKEN en la cabecera
         const response = await fetch('http://localhost:8082/api/v1/bookings', {
             method: 'GET',
             headers: {
@@ -32,41 +26,76 @@ export const load: PageServerLoad = async ({ fetch, locals }) => {
             }
         });
 
-        // 3. Manejo de errores (Ej: Token expirado)
         if (!response.ok) {
             if (response.status === 401 || response.status === 403) {
-                // Si Spring Boot rechaza el token, lanzamos un 401.
-                // (En un sistema más avanzado, aquí borraríamos la cookie y redirigiríamos al login)
                 error(401, 'Tu sesión ha expirado o no tienes permisos.');
             }
-            
-            console.error(`Error del Backend: ${response.status}`);
             error(500, 'Error al cargar la lista de reservas.');
         }
 
-        // 4. Convertimos el JSON a nuestro arreglo de reservas
-        const reservas: ReservaResumen[] = await response.json();
-        // 5. Retornamos los datos a la página (+page.svelte)
-        return {
-            reservas
-        };
+        const reservas: Array<ReservaResumen> = await response.json();
+        return { reservas };
 
     } catch (err) {
-        console.error('Error de conexión con el Backend:', err);
         error(500, 'No se pudo conectar con el servidor del hotel.');
     }
-
 };
 
-export const actions = {
+// --- ACCIONES DEL SERVIDOR ---
+export const actions: Actions = {
+    
     logout: async ({ cookies }) => {
-        // 1. Borramos la cookie segura del JWT
         cookies.delete('jwt_token', { path: '/' });
-        
-        // 2. Borramos la cookie del rol
         cookies.delete('user_role', { path: '/' });
-
-        // 3. Redirigimos al login
         throw redirect(303, '/login');
+    },
+
+    // NUEVA ACCIÓN: Check-out
+    checkout: async ({ request, locals, fetch }) => {
+        const data = await request.formData();
+        const id = data.get('id');
+
+        const response = await fetch(`http://localhost:8082/api/v1/bookings/${id}/checkout`, {
+            method: 'POST',
+            headers: { 'Authorization': `Bearer ${locals.token}` }
+        });
+
+        if (!response.ok) {
+            const errData = await response.json();
+            // Si el cliente debe dinero, Spring Boot devolverá un 400 y lo mostraremos aquí
+            return fail(response.status, { error: errData.message || 'Error al realizar el check-out.' });
+        }
+        return { success: true, message: 'Check-out realizado exitosamente.' };
+    },
+
+    // NUEVA ACCIÓN: Cancelar
+    cancelar: async ({ request, locals, fetch }) => {
+        const data = await request.formData();
+        const id = data.get('id');
+        const motivo = data.get('motivo');
+
+        if (!motivo) {
+            return fail(400, { error: 'El motivo de cancelación es obligatorio.' });
+        }
+
+        const response = await fetch(`http://localhost:8082/api/v1/bookings/${id}/cancel`, {
+            method: 'PATCH',
+            headers: {
+                'Authorization': `Bearer ${locals.token}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ motivo })
+        });
+
+        if (!response.ok) {
+            const errData = await response.json();
+            return fail(response.status, { error: errData.message || 'Error al cancelar la reserva.' });
+        }
+        
+        const result = await response.json();
+        return { 
+            success: true, 
+            message: `Reserva cancelada. Multa: $${result.montoMulta}. Reembolso: $${result.montoReembolso}.` 
+        };
     }
 };
