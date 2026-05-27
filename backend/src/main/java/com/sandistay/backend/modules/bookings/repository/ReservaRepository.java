@@ -6,6 +6,10 @@ import org.springframework.stereotype.Repository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
+import com.sandistay.backend.modules.bookings.model.ReservaTotalProjection;
+import java.time.LocalDateTime;
+import java.util.List;
+
 
 import java.util.Optional;
 
@@ -45,4 +49,17 @@ public interface ReservaRepository extends JpaRepository<Reserva, Integer> {
             @Param("idReserva") Integer idReserva,
             @Param("idUsuario") Integer idUsuario
     );
+    
+    /**
+     * Llama a la función SQL para calcular los totales y descuentos de una reserva.
+     * Retorna una proyección con los 4 campos calculados por PostgreSQL.
+     */
+    @Query(value = "SELECT * FROM fn_calcular_total_reserva(:idReserva)", nativeQuery = true)
+    ReservaTotalProjection calcularTotalReserva(@Param("idReserva") Integer idReserva);
+    
+    /**
+     * Busca reservas por estado y que hayan sido creadas antes de una fecha/hora específica.
+     * Útil para encontrar reservas pendientes que ya expiraron su tiempo de pago (24h).
+     */
+    List<Reserva> findByIdEstadoReservaAndFechaCreacionBefore(Integer idEstadoReserva, LocalDateTime fechaLimite);
 }

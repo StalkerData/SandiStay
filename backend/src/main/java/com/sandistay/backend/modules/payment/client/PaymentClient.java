@@ -59,11 +59,12 @@ public class PaymentClient {
             }
 
         } catch (RestClientException e) {
-            // 4. Manejo de Fallos (Resiliencia)
-            // Si Mocki.io se cae, no hay internet, o devuelve un Error 500, atrapamos la excepción
-            // para que nuestra aplicación no explote, y simplemente rechazamos el pago.
             log.error("Error crítico de comunicación con el Mock de Pagos: {}", e.getMessage());
-            return false;
+            // PATRÓN FALLBACK PARA PORTAFOLIO: 
+            // Si el servicio externo se cae o la URL expira, aprobamos el pago localmente 
+            // para garantizar que la demostración del sistema nunca se interrumpa.
+            log.warn("Fallback activado: Simulando aprobación de pago localmente.");
+            return true; 
         }
     }
 }

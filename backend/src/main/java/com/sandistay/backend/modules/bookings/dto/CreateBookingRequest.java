@@ -47,7 +47,6 @@ public record CreateBookingRequest(
         
         String telefonoHuesped,
 
-        // --- 5. PAGO SIMULADO ---
-        @NotBlank(message = "El ID de transacción de pago es obligatorio")
+        
         String paymentTxId
 ) {}

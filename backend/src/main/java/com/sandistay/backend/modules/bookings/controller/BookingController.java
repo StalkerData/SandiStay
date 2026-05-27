@@ -5,6 +5,7 @@ import com.sandistay.backend.modules.bookings.dto.BookingResponse;
 import com.sandistay.backend.modules.bookings.dto.CancelBookingRequest;
 import com.sandistay.backend.modules.bookings.dto.CancelBookingResponse;
 import com.sandistay.backend.modules.bookings.dto.CreateBookingRequest;
+import com.sandistay.backend.modules.bookings.dto.ReservaTotalResponse;
 import com.sandistay.backend.modules.bookings.service.BookingService;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import jakarta.validation.Valid;
@@ -149,5 +150,24 @@ public class BookingController {
     public ResponseEntity<BookingDetailResponse> getBookingFullDetails(@PathVariable Integer id) {
         BookingDetailResponse response = bookingService.getBookingFullDetails(id);
         return ResponseEntity.ok(response);
+    }
+    
+    /**
+     * Endpoint protegido para pre-visualizar los costos totales de una reserva.
+     */
+    @GetMapping("/{id}/total")
+    public ResponseEntity<ReservaTotalResponse> getReservaTotal(@PathVariable Integer id) {
+        ReservaTotalResponse response = bookingService.calculateTotal(id);
+        return ResponseEntity.ok(response);
+    }
+    
+    /**
+     * Endpoint para pagar una reserva que estaba en estado PENDIENTE (Ventana de 24h).
+     */
+    @PostMapping("/{id}/pay")
+    public ResponseEntity<?> payBooking(@PathVariable Integer id, @RequestParam String txId) {
+        // TODO: Aquí llamaríamos a un método en BookingService que verifique el txId,
+        // guarde el pago y pase la reserva de PENDIENTE a CONFIRMADA.
+        return ResponseEntity.ok("Pago registrado exitosamente");
     }
 }

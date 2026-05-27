@@ -2,6 +2,8 @@ package com.sandistay.backend.modules.finance.controller;
 
 import com.sandistay.backend.modules.finance.dto.GenerateInvoiceRequest;
 import com.sandistay.backend.modules.finance.service.ReportService;
+import com.sandistay.backend.modules.finance.model.EstadoCuentaView;
+import com.sandistay.backend.modules.finance.service.FinanceService;
 
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import jakarta.validation.Valid;
@@ -17,11 +19,15 @@ import org.springframework.web.bind.annotation.*;
 @SecurityRequirement(name = "Bearer Authentication") 
 public class FinanceController {
 
-    private final ReportService reportService;
+	private final ReportService reportService;
+    private final FinanceService financeService; // <--- 1. AGREGAMOS LA VARIABLE
 
-    public FinanceController(ReportService reportService) {
+    // 2. ACTUALIZAMOS EL CONSTRUCTOR PARA INYECTAR AMBOS SERVICIOS
+    public FinanceController(ReportService reportService, FinanceService financeService) {
         this.reportService = reportService;
+        this.financeService = financeService;
     }
+
 
     /**
      * Endpoint protegido para generar una factura en BD y descargar su PDF.
@@ -53,6 +59,14 @@ public class FinanceController {
         headers.setContentLength(pdfBytes.length);
 
         return new ResponseEntity<>(pdfBytes, headers, HttpStatus.CREATED);
+    }
+    /**
+     * Endpoint protegido para consultar el estado de cuenta (balance) de una reserva.
+     */
+    @GetMapping("/balance/{idReserva}")
+    public ResponseEntity<EstadoCuentaView> getBalance(@PathVariable Integer idReserva) {
+        EstadoCuentaView balance = financeService.getBalance(idReserva);
+        return ResponseEntity.ok(balance);
     }
         
 }

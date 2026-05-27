@@ -3,10 +3,12 @@ package com.sandistay.backend.modules.bookings.service;
 import com.sandistay.backend.modules.bookings.dto.BookingDetailResponse;
 import com.sandistay.backend.modules.bookings.dto.BookingResponse;
 import com.sandistay.backend.modules.bookings.dto.CreateBookingRequest;
+import com.sandistay.backend.modules.bookings.dto.ReservaTotalResponse;
 import com.sandistay.backend.modules.bookings.model.Reserva;
 import com.sandistay.backend.modules.bookings.model.ReservaArea;
 import com.sandistay.backend.modules.bookings.model.ReservaHabitacion;
 import com.sandistay.backend.modules.bookings.model.ReservaHabitacionView;
+import com.sandistay.backend.modules.bookings.model.ReservaTotalProjection;
 import com.sandistay.backend.modules.bookings.model.ReservaView;
 import com.sandistay.backend.modules.bookings.repository.ReservaAreaRepository;
 import com.sandistay.backend.modules.bookings.repository.ReservaHabitacionRepository;
@@ -26,6 +28,7 @@ import java.math.BigDecimal;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.UUID;
+
 
 @Service
 public class BookingService {
@@ -70,18 +73,10 @@ public class BookingService {
         // 1. VALIDACIÓN DE NEGOCIO (Disponibilidad)
         validarDisponibilidad(request);
 
-        // 2. VERIFICACIÓN DE PAGO (Anti-Fraude)
-        // Llamamos al Cliente HTTP que se comunica con Mocki.io
-        boolean pagoValido = paymentClient.verifyPayment(request.paymentTxId()); 
-        
-        if (!pagoValido) {
-            throw new RuntimeException("El pago no pudo ser verificado o fue rechazado por la pasarela.");
-        }
-
-        // 3. GESTIÓN DEL CLIENTE (Guest Checkout)
+        // 2. GESTIÓN DEL CLIENTE
         Integer idCliente = getOrCreateCliente(request);
 
-        // 4. PERSISTENCIA: Crear Cabecera de Reserva
+        // 3. PERSISTENCIA: Crear Cabecera de Reserva (SIEMPRE NACE PENDIENTE)
         Reserva reserva = new Reserva();
         reserva.setCodigoReserva(generarCodigoUnico());
         reserva.setTipoReserva(request.tipoReserva());
@@ -91,45 +86,66 @@ public class BookingService {
         reserva.setTelefonoHuesped(request.telefonoHuesped());
         reserva.setNumeroAdultos(request.numeroAdultos() != null ? request.numeroAdultos() : 0);
         reserva.setNumeroNinos(request.numeroNinos() != null ? request.numeroNinos() : 0);
-        reserva.setIdEstadoReserva(2); // 2 = CONFIRMADA (Según nuestro seed_data.sql)
+        reserva.setIdEstadoReserva(1); // 1 = PENDIENTE (Esperando pago)
         reserva.setIdUsuarioCreacion(idUsuarioActual);
         
-        // Guardamos la cabecera para obtener el ID generado por PostgreSQL
         reserva = reservaRepository.save(reserva);
 
-        // 5. PERSISTENCIA: Crear Detalle (Habitación o Área)
+        // 4. PERSISTENCIA: Crear Detalle (Habitación o Área)
         if ("Habitacion".equalsIgnoreCase(request.tipoReserva())) {
             guardarDetalleHabitacion(request, reserva.getIdReserva());
         } else {
             guardarDetalleArea(request, reserva.getIdReserva());
         }
-     // =========================================================
-        // NUEVO PASO 5.5: PERSISTENCIA DEL PAGO
-        // =========================================================
-        Pago pago = new Pago();
-        pago.setCodigoPago("PAG-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase());
-        pago.setIdReserva(reserva.getIdReserva());
-        
-        // Como los precios están fijos por ahora en los métodos de abajo, 
-        // guardamos un monto representativo para que la matemática de cancelación funcione.
-        pago.setMonto(new BigDecimal("400000.00")); 
-        
-        pago.setIdMetodoPago(2); // 2 = Nequi (Según nuestro seed_data.sql)
-        pago.setNumeroReferencia(request.paymentTxId());
-        pago.setIdEstadoPago(2); // 2 = APROBADO
-        pago.setIdUsuarioRegistro(idUsuarioActual);
-        pago.setObservaciones("Pago procesado y verificado automáticamente vía Mock.");
-        
-        pagoRepository.save(pago);
 
-        // 6. NOTIFICACIÓN ASÍNCRONA
-        // TODO: Llamar a EmailService.sendConfirmationEmail(reserva.getEmailHuesped());
+        String estadoFinalString = "PENDIENTE";
+        String mensajeFinal = "Reserva creada. Tienes 24 horas para realizar el pago.";
 
-        // 7. RETORNAR RESPUESTA AL FRONTEND
+        // 5. PROCESAMIENTO DE PAGO (Solo si se envía en la misma petición, ej: Staff en efectivo o Wizard Web)
+        if (request.paymentTxId() != null && !request.paymentTxId().isBlank()) {
+            
+            // Verificamos el pago con el Mock
+            boolean pagoValido = paymentClient.verifyPayment(request.paymentTxId()); 
+            if (!pagoValido) {
+                throw new RuntimeException("El pago no pudo ser verificado o fue rechazado por la pasarela.");
+            }
+
+            // Calculamos el total real
+            ReservaTotalResponse totales = calculateTotal(reserva.getIdReserva());
+            BigDecimal montoAPagar = totales.totalFinal();
+
+            if ("Area".equalsIgnoreCase(request.tipoReserva())) {
+                montoAPagar = montoAPagar.multiply(new BigDecimal("0.30")); // Anticipo 30%
+            }
+
+            // Guardamos el pago
+            Pago pago = new Pago();
+            pago.setCodigoPago("PAG-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase());
+            pago.setIdReserva(reserva.getIdReserva());
+            pago.setMonto(montoAPagar); 
+            pago.setIdMetodoPago(2); // Asumimos Nequi por ahora
+            pago.setNumeroReferencia(request.paymentTxId());
+            pago.setIdEstadoPago(2); // APROBADO
+            pago.setIdUsuarioRegistro(idUsuarioActual);
+            pago.setObservaciones("Pago procesado al momento de la reserva.");
+            pagoRepository.save(pago);
+
+            // Actualizamos el estado de la reserva si es Habitación
+            if ("Habitacion".equalsIgnoreCase(request.tipoReserva())) {
+                reserva.setIdEstadoReserva(2); // 2 = CONFIRMADA
+                reservaRepository.save(reserva);
+                estadoFinalString = "CONFIRMADA";
+                mensajeFinal = "Reserva creada y pagada exitosamente.";
+            } else {
+                mensajeFinal = "Reserva creada. Anticipo del 30% recibido. Saldo pendiente.";
+            }
+        }
+
+        // 6. RETORNAR RESPUESTA AL FRONTEND
         return new BookingResponse(
                 reserva.getCodigoReserva(),
-                "CONFIRMADA",
-                "Reserva creada y pagada exitosamente."
+                estadoFinalString,
+                mensajeFinal
         );
     }
 
@@ -369,6 +385,26 @@ public class BookingService {
 
         // 4. Empaquetar y retornar
         return new BookingDetailResponse(reserva, items, pagos);
+    }
+    /**
+     * Obtiene el cálculo financiero total de una reserva delegando a PostgreSQL.
+     * Este método es utilizado tanto por el endpoint GET /{id}/total como internamente
+     * durante la creación de la reserva para determinar el monto a cobrar.
+     */
+    public ReservaTotalResponse calculateTotal(Integer idReserva) {
+        // Llamamos a la proyección que creamos en ReservaRepository
+        ReservaTotalProjection projection = reservaRepository.calcularTotalReserva(idReserva);
+        
+        if (projection == null) {
+            throw new RuntimeException("No se pudo calcular el total para la reserva especificada.");
+        }
+
+        return new ReservaTotalResponse(
+                projection.getSubtotalHabitaciones(),
+                projection.getSubtotalAreas(),
+                projection.getDescuentoCliente(),
+                projection.getTotalFinal()
+        );
     }
     
 }
