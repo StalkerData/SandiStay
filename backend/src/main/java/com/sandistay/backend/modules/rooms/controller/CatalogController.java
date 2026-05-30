@@ -2,10 +2,19 @@ package com.sandistay.backend.modules.rooms.controller;
 
 import com.sandistay.backend.modules.rooms.dto.CatalogAreaResponse;
 import com.sandistay.backend.modules.rooms.dto.CatalogRoomResponse;
+import com.sandistay.backend.modules.rooms.model.Area;
+import com.sandistay.backend.modules.rooms.model.Habitacion;
+import com.sandistay.backend.modules.rooms.model.ImagenArea;
 import com.sandistay.backend.modules.rooms.service.CatalogService;
+import com.sandistay.backend.modules.rooms.model.ImagenHabitacion;
+
+import org.springframework.web.multipart.MultipartFile;
+import org.springframework.http.MediaType;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 
 import java.time.LocalDate;
 import java.time.LocalTime;
@@ -76,5 +85,107 @@ public class CatalogController {
     public ResponseEntity<CatalogRoomResponse> getRoomDetails(@PathVariable Integer id) {
         CatalogRoomResponse room = catalogService.getRoomDetails(id);
         return ResponseEntity.ok(room);
+    }
+    // =================================================================
+    // ENDPOINTS ADMINISTRATIVOS (Requieren Rol ADMIN o STAFF)
+    // =================================================================
+
+    @PostMapping("/rooms")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<Habitacion> createRoom(@RequestBody Habitacion habitacion) {
+        Habitacion nuevaHabitacion = catalogService.createRoom(habitacion);
+        return ResponseEntity.status(201).body(nuevaHabitacion);
+    }
+
+    @PutMapping("/rooms/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<Habitacion> updateRoom(@PathVariable Integer id, @RequestBody Habitacion habitacion) {
+        Habitacion habitacionActualizada = catalogService.updateRoom(id, habitacion);
+        return ResponseEntity.ok(habitacionActualizada);
+    }
+
+    @DeleteMapping("/rooms/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<String> deleteRoom(@PathVariable Integer id) {
+        catalogService.deleteRoomLogical(id);
+        return ResponseEntity.ok("Habitación eliminada lógicamente con éxito.");
+    }
+
+    @PatchMapping("/rooms/{id}/status")
+    @PreAuthorize("hasAnyRole('ADMIN', 'STAFF')")
+    public ResponseEntity<String> updateRoomStatus(@PathVariable Integer id, @RequestParam Integer idEstadoLugar) {
+        catalogService.updateRoomStatus(id, idEstadoLugar);
+        return ResponseEntity.ok("Estado de la habitación actualizado con éxito.");
+    }
+    
+    /**
+     * Sube una imagen para una habitación específica.
+     * Consume MULTIPART_FORM_DATA porque recibe un archivo binario, no un JSON.
+     */
+    @PostMapping(value = "/rooms/{id}/images", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @PreAuthorize("hasRole('ADMIN')")
+    @SecurityRequirement(name = "Bearer Authentication") 
+    public ResponseEntity<ImagenHabitacion> uploadRoomImage(
+            @PathVariable Integer id, 
+            @RequestParam("file") MultipartFile file) {
+        
+        ImagenHabitacion imagenGuardada = catalogService.uploadRoomImage(id, file);
+        return ResponseEntity.status(201).body(imagenGuardada);
+    }
+    
+    /**
+     * Elimina una imagen específica de una habitación (Física y Lógicamente).
+     */
+    @DeleteMapping("/rooms/images/{idImagen}")
+    @PreAuthorize("hasRole('ADMIN')")
+    @SecurityRequirement(name = "Bearer Authentication")
+    public ResponseEntity<String> deleteRoomImage(@PathVariable Integer idImagen) {
+        catalogService.deleteRoomImage(idImagen);
+        return ResponseEntity.ok("Imagen eliminada exitosamente del servidor y la base de datos.");
+    }
+    
+    @PostMapping("/areas")
+    @PreAuthorize("hasRole('ADMIN')")
+    @SecurityRequirement(name = "Bearer Authentication")
+    public ResponseEntity<Area> createArea(@RequestBody Area area) {
+        return ResponseEntity.status(201).body(catalogService.createArea(area));
+    }
+
+    @PutMapping("/areas/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
+    @SecurityRequirement(name = "Bearer Authentication")
+    public ResponseEntity<Area> updateArea(@PathVariable Integer id, @RequestBody Area area) {
+        return ResponseEntity.ok(catalogService.updateArea(id, area));
+    }
+
+    @DeleteMapping("/areas/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
+    @SecurityRequirement(name = "Bearer Authentication")
+    public ResponseEntity<String> deleteArea(@PathVariable Integer id) {
+        catalogService.deleteAreaLogical(id);
+        return ResponseEntity.ok("Área eliminada lógicamente con éxito.");
+    }
+
+    @PatchMapping("/areas/{id}/status")
+    @PreAuthorize("hasAnyRole('ADMIN', 'STAFF')")
+    @SecurityRequirement(name = "Bearer Authentication")
+    public ResponseEntity<String> updateAreaStatus(@PathVariable Integer id, @RequestParam Integer idEstadoLugar) {
+        catalogService.updateAreaStatus(id, idEstadoLugar);
+        return ResponseEntity.ok("Estado del área actualizado con éxito.");
+    }
+
+    @PostMapping(value = "/areas/{id}/images", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @PreAuthorize("hasRole('ADMIN')")
+    @SecurityRequirement(name = "Bearer Authentication")
+    public ResponseEntity<ImagenArea> uploadAreaImage(@PathVariable Integer id, @RequestParam("file") MultipartFile file) {
+        return ResponseEntity.status(201).body(catalogService.uploadAreaImage(id, file));
+    }
+
+    @DeleteMapping("/areas/images/{idImagen}")
+    @PreAuthorize("hasRole('ADMIN')")
+    @SecurityRequirement(name = "Bearer Authentication")
+    public ResponseEntity<String> deleteAreaImage(@PathVariable Integer idImagen) {
+        catalogService.deleteAreaImage(idImagen);
+        return ResponseEntity.ok("Imagen de área eliminada exitosamente.");
     }
 }

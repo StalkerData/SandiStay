@@ -114,6 +114,26 @@ public class GlobalExceptionHandler {
         
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorResponse);
     }
+    
+    /**
+     * 6. Maneja errores de Acceso Denegado (Falta de permisos o roles).
+     * Devuelve un 403 Forbidden.
+     */
+    @ExceptionHandler(org.springframework.security.access.AccessDeniedException.class)
+    public ResponseEntity<ErrorResponse> handleAccessDeniedException(
+            org.springframework.security.access.AccessDeniedException ex, 
+            HttpServletRequest request) {
+        
+        ErrorResponse errorResponse = new ErrorResponse(
+                LocalDateTime.now(),
+                HttpStatus.FORBIDDEN.value(),
+                "Forbidden",
+                "No tienes los permisos necesarios para realizar esta acción.",
+                request.getRequestURI()
+        );
+        
+        return ResponseEntity.status(HttpStatus.FORBIDDEN).body(errorResponse);
+    }
 
 	// Más adelante agregaremos manejadores personalizados aquí
 	// Como (Ej: ReservaNotFoundException, PagoRechazadoException)
