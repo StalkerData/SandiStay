@@ -59,34 +59,21 @@ public class CatalogService {
      * Convierte las proyecciones SQL en DTOs inmutables para el Frontend.
      */
     public List<CatalogRoomResponse> searchAvailableRooms(
-            LocalDate fechaInicio, 
-            LocalDate fechaFin, 
-            Integer adultos, 
-            Integer ninos, 
-            Integer tipoHabitacionId) {
+            LocalDate fechaInicio, LocalDate fechaFin, Integer adultos, Integer ninos, Integer tipoHabitacionId) {
 
-        // 1. Llamamos a la función nativa de PostgreSQL
         List<RoomAvailabilityProjection> projections = catalogRepository.findAvailableRooms(
                 fechaInicio, fechaFin, adultos, ninos, tipoHabitacionId
         );
 
-        // 2. Mapeamos el resultado al DTO
         return projections.stream().map(proj -> {
-            // Construimos la ruta de la imagen principal basada en nuestra convención de carpetas
-            String imagenPrincipal = "/uploads/Habitaciones/" + proj.getCodigo() + "/" + proj.getCodigo() + "_1.jpg";
+            // BUSCAMOS LA IMAGEN REAL EN LA BASE DE DATOS
+            String imagenPrincipal = imagenHabitacionRepository.findByIdHabitacion(proj.getIdHabitacion())
+                    .stream().findFirst().map(ImagenHabitacion::getUrl).orElse(null);
 
             return new CatalogRoomResponse(
-                    proj.getIdHabitacion(),
-                    proj.getCodigo(),
-                    proj.getNumero(),
-                    proj.getNombre(),
-                    proj.getTipoHabitacion(),
-                    proj.getCapacidadAdultos(),
-                    proj.getCapacidadNinos(),
-                    proj.getPrecioNoche(),
-                    proj.getPrecioDia(),
-                    proj.getDescripcion(),
-                    imagenPrincipal
+                    proj.getIdHabitacion(), proj.getCodigo(), proj.getNumero(), proj.getNombre(),
+                    proj.getTipoHabitacion(), proj.getCapacidadAdultos(), proj.getCapacidadNinos(),
+                    proj.getPrecioNoche(), proj.getPrecioDia(), proj.getDescripcion(), imagenPrincipal
             );
         }).collect(Collectors.toList());
     }
@@ -95,61 +82,44 @@ public class CatalogService {
      * Busca áreas sociales disponibles delegando la lógica a PostgreSQL.
      */
     public List<CatalogAreaResponse> searchAvailableAreas(
-            LocalDate fechaEvento, 
-            LocalTime horaInicio, 
-            LocalTime horaFin, 
-            Integer capacidadMinima, 
-            Integer tipoAreaId) {
+            LocalDate fechaEvento, LocalTime horaInicio, LocalTime horaFin, Integer capacidadMinima, Integer tipoAreaId) {
 
-        // 1. Llamamos a la función nativa de PostgreSQL
         List<AreaAvailabilityProjection> projections = catalogRepository.findAvailableAreas(
                 fechaEvento, horaInicio, horaFin, capacidadMinima, tipoAreaId
         );
 
-        // 2. Mapeamos el resultado al DTO
         return projections.stream().map(proj -> {
-            // Construimos la ruta de la imagen principal
-            String imagenPrincipal = "/uploads/Areas/" + proj.getCodigo() + "/" + proj.getCodigo() + "_1.jpg";
+            // BUSCAMOS LA IMAGEN REAL EN LA BASE DE DATOS
+            String imagenPrincipal = imagenAreaRepository.findByIdArea(proj.getIdArea())
+                    .stream().findFirst().map(ImagenArea::getUrl).orElse(null);
 
             return new CatalogAreaResponse(
-                    proj.getIdArea(),
-                    proj.getCodigo(),
-                    proj.getNombre(),
-                    proj.getTipoArea(),
-                    proj.getCapacidadPersonas(),
-                    proj.getPrecioHora(),
-                    proj.getDescripcion(),
-                    imagenPrincipal
+                    proj.getIdArea(), proj.getCodigo(), proj.getNombre(), proj.getTipoArea(),
+                    proj.getCapacidadPersonas(), proj.getPrecioHora(), proj.getDescripcion(), imagenPrincipal
             );
         }).collect(Collectors.toList());
     }
     
+    
     /**
      * Obtiene el detalle de una habitación específica.
      */
+
     public CatalogRoomResponse getRoomDetails(Integer id) {
-        // 1. Buscamos en la vista SQL
         HabitacionView view = catalogRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Habitación no encontrada en el catálogo."));
 
-        // 2. Construimos la ruta de la imagen
-        String imagenPrincipal = "/uploads/Habitaciones/" + view.getCodigo() + "/" + view.getCodigo() + "_1.jpg";
+        // BUSCAMOS LA IMAGEN REAL EN LA BASE DE DATOS
+        String imagenPrincipal = imagenHabitacionRepository.findByIdHabitacion(view.getIdHabitacion())
+                .stream().findFirst().map(ImagenHabitacion::getUrl).orElse(null);
 
-        // 3. Mapeamos al DTO
         return new CatalogRoomResponse(
-                view.getIdHabitacion(),
-                view.getCodigo(),
-                view.getNumero(),
-                view.getNombre(),
-                view.getTipoHabitacion(),
-                view.getCapacidadAdultos(),
-                view.getCapacidadNinos(),
-                view.getPrecioNoche(),
-                view.getPrecioDia(),
-                view.getDescripcion(),
-                imagenPrincipal
+                view.getIdHabitacion(), view.getCodigo(), view.getNumero(), view.getNombre(),
+                view.getTipoHabitacion(), view.getCapacidadAdultos(), view.getCapacidadNinos(),
+                view.getPrecioNoche(), view.getPrecioDia(), view.getDescripcion(), imagenPrincipal
         );
     }
+   
     
     // =================================================================
     // MÉTODOS ADMINISTRATIVOS (CRUD HABITACIONES)
@@ -341,4 +311,5 @@ public class CatalogService {
         }
         imagenAreaRepository.delete(imagen);
     }
+    
 }

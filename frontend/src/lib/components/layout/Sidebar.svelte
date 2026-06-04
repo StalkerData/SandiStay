@@ -3,11 +3,12 @@
     let { currentPath = '' } : { currentPath?: string } = $props();
 
     // Lista de menús (Más adelante la filtraremos por Rol)
-    const menuItems =[
+const menuItems =[
         { name: 'Dashboard', path: '/dashboard', icon: '📊' },
         { name: 'Reservas', path: '/dashboard/bookings', icon: '📅' },
+        { name: 'Catálogo', path: '/settings/catalog', icon: '🛏️' }, 
         { name: 'Reportes', path: '/reports', icon: '📈' },
-        { name: 'Configuración', path: '/settings', icon: '⚙️' }
+        { name: 'Usuarios', path: '/settings/users', icon: '👥' }
     ];
 </script>
 

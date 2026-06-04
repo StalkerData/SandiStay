@@ -18,6 +18,8 @@
     // --- ESTADO DEL FORMULARIO ---
     let fechaInicio = $state('');
     let fechaFin = $state('');
+    let horaInicio = $state('08:00');
+    let horaFin = $state('12:00');
     let numeroAdultos = $state(2);
     let numeroNinos = $state(0);
     
@@ -49,11 +51,13 @@
 
         const payload = {
             tipoReserva: tipoReserva,
-            itemId: item.id,
+            itemId: item.id || item.idArea, // Soporta ambos IDs
             fechaInicio: fechaInicio,
             fechaFin: tipoReserva === 'Habitacion' ? fechaFin : null,
+            horaInicio: tipoReserva === 'Area' ? horaInicio + ':00' : null, // Formato HH:mm:ss
+            horaFin: tipoReserva === 'Area' ? horaFin + ':00' : null,
             numeroAdultos: numeroAdultos,
-            numeroNinos: numeroNinos,
+            numeroNinos: tipoReserva === 'Habitacion' ? numeroNinos : 0,
             nombreHuesped: nombreHuesped,
             documentoHuesped: documentoHuesped,
             emailHuesped: emailHuesped,
@@ -116,12 +120,20 @@
                     <section class="bg-surface p-6 rounded-xl shadow-sm border border-neutral/10">
                         <h2 class="text-xl font-bold text-secondary mb-4">Fechas de Estadía</h2>
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <Input id="fechaInicio" label="Check-in" type="date" bind:value={fechaInicio} required />
                             {#if tipoReserva === 'Habitacion'}
+                                <Input id="fechaInicio" label="Check-in" type="date" bind:value={fechaInicio} required />
                                 <Input id="fechaFin" label="Check-out" type="date" bind:value={fechaFin} required />
+                            {:else}
+                                <Input id="fechaInicio" label="Fecha del Evento" type="date" bind:value={fechaInicio} required />
+                                <div class="grid grid-cols-2 gap-2">
+                                    <Input id="horaInicio" label="Hora Inicio" type="time" bind:value={horaInicio} required />
+                                    <Input id="horaFin" label="Hora Fin" type="time" bind:value={horaFin} required />
+                                </div>
                             {/if}
-                            <Input id="adultos" label="Adultos" type="number" min="1" bind:value={numeroAdultos} required />
-                            <Input id="ninos" label="Niños" type="number" min="0" bind:value={numeroNinos} required />
+                            <Input id="adultos" label={tipoReserva === 'Habitacion' ? 'Adultos' : 'Asistentes'} type="number" min="1" bind:value={numeroAdultos} required />
+                            {#if tipoReserva === 'Habitacion'}
+                                <Input id="ninos" label="Niños" type="number" min="0" bind:value={numeroNinos} required />
+                            {/if}
                         </div>
                     </section>
 

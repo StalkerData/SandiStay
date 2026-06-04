@@ -5,4 +5,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
 @Repository
-public interface ImagenAreaRepository extends JpaRepository<ImagenArea, Integer> {}
+public interface ImagenAreaRepository extends JpaRepository<ImagenArea, Integer> {
+    java.util.List<ImagenArea> findByIdArea(Integer idArea);
+
+}

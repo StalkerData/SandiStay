@@ -7,6 +7,8 @@ import com.sandistay.backend.modules.rooms.model.Habitacion;
 import com.sandistay.backend.modules.rooms.model.ImagenArea;
 import com.sandistay.backend.modules.rooms.service.CatalogService;
 import com.sandistay.backend.modules.rooms.model.ImagenHabitacion;
+import com.sandistay.backend.modules.rooms.repository.HabitacionRepository;
+import com.sandistay.backend.modules.rooms.repository.AreaRepository;
 
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.http.MediaType;
@@ -25,9 +27,13 @@ import java.util.List;
 public class CatalogController {
 
     private final CatalogService catalogService;
+    private final HabitacionRepository habitacionRepository;
+    private final AreaRepository areaRepository;
 
-    public CatalogController(CatalogService catalogService) {
+    public CatalogController(CatalogService catalogService, HabitacionRepository habitacionRepository, AreaRepository areaRepository) {
         this.catalogService = catalogService;
+        this.habitacionRepository=habitacionRepository;
+        this.areaRepository = areaRepository;
     }
 
     /**
@@ -187,5 +193,33 @@ public class CatalogController {
     public ResponseEntity<String> deleteAreaImage(@PathVariable Integer idImagen) {
         catalogService.deleteAreaImage(idImagen);
         return ResponseEntity.ok("Imagen de área eliminada exitosamente.");
+    }
+    
+    /**
+     * Obtiene TODO el inventario de habitaciones (sin filtros de disponibilidad).
+     * Exclusivo para el panel de administración.
+     */
+    @GetMapping("/admin/rooms")
+    @PreAuthorize("hasAnyRole('ADMIN', 'STAFF')")
+    @SecurityRequirement(name = "Bearer Authentication")
+    public ResponseEntity<List<Habitacion>> getAllRoomsAdmin() {
+        // Traemos todas las habitaciones que no estén eliminadas lógicamente
+        List<Habitacion> rooms = habitacionRepository.findAll().stream()
+                .filter(Habitacion::getActivo)
+                .toList();
+        return ResponseEntity.ok(rooms);
+    }
+
+    /**
+     * Obtiene TODO el inventario de áreas.
+     */
+    @GetMapping("/admin/areas")
+    @PreAuthorize("hasAnyRole('ADMIN', 'STAFF')")
+    @SecurityRequirement(name = "Bearer Authentication")
+    public ResponseEntity<List<Area>> getAllAreasAdmin() {
+        List<Area> areas = areaRepository.findAll().stream()
+                .filter(Area::getActivo)
+                .toList();
+        return ResponseEntity.ok(areas);
     }
 }
