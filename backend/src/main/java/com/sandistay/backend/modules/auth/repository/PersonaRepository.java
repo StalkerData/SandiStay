@@ -5,4 +5,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
 @Repository
-public interface PersonaRepository extends JpaRepository<Persona, Integer> {}
+public interface PersonaRepository extends JpaRepository<Persona, Integer> {
+	// Busca si la persona ya existe por su documento
+    java.util.Optional<Persona> findByNumeroDocumento(String numeroDocumento);
+}

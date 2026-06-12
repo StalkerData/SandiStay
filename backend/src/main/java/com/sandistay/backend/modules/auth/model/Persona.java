@@ -20,6 +20,9 @@ public class Persona {
     private String numeroDocumento;
 
     private String email;
+    
+    @Column(name = "telefono")
+    private String telefono;
 
     @Column(name = "idpais")
     private Integer idPais;
@@ -40,6 +43,8 @@ public class Persona {
     public void setNumeroDocumento(String numeroDocumento) { this.numeroDocumento = numeroDocumento; }
     public String getEmail() { return email; }
     public void setEmail(String email) { this.email = email; }
+    public String getTelefono() {return telefono;}
+    public void setTelefono(String telefono) {this.telefono = telefono;}
     public Integer getIdPais() { return idPais; }
     public void setIdPais(Integer idPais) { this.idPais = idPais; }
     public Integer getIdEstadoPersona() { return idEstadoPersona; }

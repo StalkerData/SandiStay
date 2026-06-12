@@ -8,6 +8,7 @@
     let items = $derived(data.detalle.items);
     let pagos = $derived(data.detalle.pagos);
     let balance = $derived(data.balance);
+    let clientHistory = $derived(data.clientHistory);
 </script>
 
 <svelte:head>
@@ -56,6 +57,42 @@
                     </div>
                 </div>
             </div>
+
+            <!-- NUEVA TARJETA: Perfil del Cliente (CRM) -->
+            {#if clientHistory}
+                <div class="bg-surface p-6 rounded-xl shadow-sm border border-neutral/10 border-l-4 border-l-secondary animate-fade-in">
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 class="text-lg font-bold text-secondary">Perfil de {reserva.nombreCliente} (CRM)</h3>
+                        <span class="bg-secondary/10 text-secondary text-xs px-2 py-1 rounded-full font-bold">
+                            {clientHistory.totalReservas > 5 ? 'VIP' : 'Regular'}
+                        </span>
+                    </div>
+                    
+                    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                        <div class="bg-base/50 p-3 rounded-lg text-center">
+                            <p class="text-2xl font-bold text-dark">{clientHistory.totalReservas}</p>
+                            <p class="text-xs text-neutral uppercase tracking-wider">Reservas Totales</p>
+                        </div>
+                        <div class="bg-base/50 p-3 rounded-lg text-center">
+                            <p class="text-2xl font-bold text-green-600">{clientHistory.reservasCompletadas}</p>
+                            <p class="text-xs text-neutral uppercase tracking-wider">Completadas</p>
+                        </div>
+                        <div class="bg-base/50 p-3 rounded-lg text-center">
+                            <p class="text-2xl font-bold text-red-600">{clientHistory.reservasCanceladas}</p>
+                            <p class="text-xs text-neutral uppercase tracking-wider">Canceladas</p>
+                        </div>
+                        <div class="bg-base/50 p-3 rounded-lg text-center">
+                            <p class="text-lg font-bold text-primary">${(clientHistory.totalGastado / 1000000).toFixed(1)}M</p>
+                            <p class="text-xs text-neutral uppercase tracking-wider">Total Gastado</p>
+                        </div>
+                    </div>
+                    
+                    <div class="mt-4 pt-4 border-t border-neutral/10 flex justify-between text-sm">
+                        <p><span class="text-neutral">Última visita:</span> <span class="font-medium text-dark">{clientHistory.ultimaReserva || 'N/A'}</span></p>
+                        <p><span class="text-neutral">Favorita:</span> <span class="font-medium text-dark">{clientHistory.habitacionFavorita || 'N/A'}</span></p>
+                    </div>
+                </div>
+            {/if}
 
             <!-- Tarjeta Ítems (Habitaciones/Áreas) -->
             <div class="bg-surface p-6 rounded-xl shadow-sm border border-neutral/10">

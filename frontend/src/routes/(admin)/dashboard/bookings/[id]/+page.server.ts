@@ -2,7 +2,6 @@ import { error } from '@sveltejs/kit';
 import type { PageServerLoad } from './$types';
 
 export const load: PageServerLoad = async ({ params, fetch, locals }) => {
-    
     const idReserva = params.id;
     const token = locals.token;
 
@@ -17,7 +16,7 @@ export const load: PageServerLoad = async ({ params, fetch, locals }) => {
         if (!resDetalle.ok) throw new Error('Error al cargar detalles');
         const detalle = await resDetalle.json();
 
-        // 2. Traer el balance financiero (Estado de cuenta)
+        // 2. Traer el balance financiero
         const resBalance = await fetch(`http://localhost:8082/api/v1/finance/balance/${idReserva}`, {
             headers: { 'Authorization': `Bearer ${token}` }
         });
@@ -27,9 +26,22 @@ export const load: PageServerLoad = async ({ params, fetch, locals }) => {
             balance = await resBalance.json();
         }
 
+        // 3. Traer el historial del cliente REAL
+        const idCliente = detalle.idCliente; // <--- AHORA USAMOS EL ID REAL
+        
+        const resHistory = await fetch(`http://localhost:8082/api/v1/reports/clients/${idCliente}/history`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+
+        let clientHistory = null;
+        if (resHistory.ok) {
+            clientHistory = await resHistory.json();
+        }
+
         return {
             detalle,
-            balance
+            balance,
+            clientHistory
         };
 
     } catch (err) {

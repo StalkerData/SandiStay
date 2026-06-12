@@ -1,0 +1,118 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<jasperReport xmlns="http://jasperreports.sourceforge.net/jasperreports"
+              xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+              xsi:schemaLocation="http://jasperreports.sourceforge.net/jasperreports http://jasperreports.sourceforge.net/xsd/jasperreport.xsd"
+              name="ReporteOcupacion"
+              pageWidth="595" pageHeight="842"
+              columnWidth="555"
+              leftMargin="20" rightMargin="20" topMargin="20" bottomMargin="20"
+              uuid="11004221-8a2b-457d-8a76-b5ffec2043b8">
+
+    <parameter name="P_FECHA_INICIO" class="java.sql.Date"/>
+    <parameter name="P_FECHA_FIN" class="java.sql.Date"/>
+
+    <queryString><![CDATA[SELECT * FROM fn_reporte_ocupacion($P{P_FECHA_INICIO}, $P{P_FECHA_FIN})]]></queryString>
+
+    <field name="out_fecha"    class="java.sql.Date"/>
+    <field name="out_tipo"     class="java.lang.String"/>
+    <field name="out_ocupadas" class="java.lang.Long"/>
+    <field name="out_ingreso"  class="java.math.BigDecimal"/>
+
+    <variable name="TOTAL_INGRESO" class="java.math.BigDecimal" calculation="Sum">
+        <variableExpression><![CDATA[$F{out_ingreso}]]></variableExpression>
+    </variable>
+
+    <!-- TÍTULO -->
+    <title>
+        <band height="60">
+            <staticText>
+                <reportElement x="0" y="0" width="555" height="30" uuid="96f64545-d5d6-42cc-8e5d-7127a340d0ce"/>
+                <textElement textAlignment="Center" verticalAlignment="Middle">
+                    <font size="18" isBold="true"/>
+                </textElement>
+                <text><![CDATA[REPORTE FINANCIERO Y DE OCUPACIÓN]]></text>
+            </staticText>
+            <textField>
+                <reportElement x="0" y="30" width="555" height="20" uuid="6ab5ddbb-7945-4867-83d4-01b4b8bf19fc"/>
+                <textElement textAlignment="Center"/>
+                <textFieldExpression><![CDATA["Período: " + new java.text.SimpleDateFormat("dd/MM/yyyy").format($P{P_FECHA_INICIO}) + " al " + new java.text.SimpleDateFormat("dd/MM/yyyy").format($P{P_FECHA_FIN})]]></textFieldExpression>
+            </textField>
+        </band>
+    </title>
+
+    <!-- CABECERA COLUMNAS -->
+    <columnHeader>
+        <band height="20">
+            <staticText>
+                <reportElement x="0" y="0" width="100" height="20" uuid="724f4c43-db9b-448a-85ad-cd6005b1d729"/>
+                <box><bottomPen lineWidth="1.0"/></box>
+                <textElement><font isBold="true"/></textElement>
+                <text><![CDATA[Fecha]]></text>
+            </staticText>
+            <staticText>
+                <reportElement x="100" y="0" width="150" height="20" uuid="37fc0f97-cd75-4e5f-b317-f63d731a64e5"/>
+                <box><bottomPen lineWidth="1.0"/></box>
+                <textElement><font isBold="true"/></textElement>
+                <text><![CDATA[Línea de Negocio]]></text>
+            </staticText>
+            <staticText>
+                <reportElement x="250" y="0" width="100" height="20" uuid="2ba4ecb0-6bad-4a06-bde5-73d250e3daf9"/>
+                <box><bottomPen lineWidth="1.0"/></box>
+                <textElement textAlignment="Center"><font isBold="true"/></textElement>
+                <text><![CDATA[Cant. Ocupada]]></text>
+            </staticText>
+            <staticText>
+                <reportElement x="350" y="0" width="205" height="20" uuid="f761c65b-17bc-4780-9fcc-0c0787875925"/>
+                <box><bottomPen lineWidth="1.0"/></box>
+                <textElement textAlignment="Right"><font isBold="true"/></textElement>
+                <text><![CDATA[Ingreso Generado]]></text>
+            </staticText>
+        </band>
+    </columnHeader>
+
+    <!-- DETALLE -->
+    <detail>
+        <band height="20">
+            <textField pattern="dd/MM/yyyy">
+                <reportElement x="0" y="0" width="100" height="20" uuid="3be212c5-1005-4391-8b71-a4fe4c0b6c5c"/>
+                <textFieldExpression><![CDATA[$F{out_fecha}]]></textFieldExpression>
+            </textField>
+            <textField>
+                <reportElement x="100" y="0" width="150" height="20" uuid="db3eaf1f-9c01-463d-a60c-f4ab1cb2f13d"/>
+                <textFieldExpression><![CDATA[$F{out_tipo}]]></textFieldExpression>
+            </textField>
+            <textField>
+                <reportElement x="250" y="0" width="100" height="20" uuid="a5856d35-b541-47b4-8121-817d353644d8"/>
+                <textElement textAlignment="Center"/>
+                <textFieldExpression><![CDATA[$F{out_ocupadas}]]></textFieldExpression>
+            </textField>
+            <textField pattern="$ #,##0.00">
+                <reportElement x="350" y="0" width="205" height="20" uuid="17658b36-5fc4-4c2b-94d9-fa51da14576d"/>
+                <textElement textAlignment="Right"/>
+                <textFieldExpression><![CDATA[$F{out_ingreso}]]></textFieldExpression>
+            </textField>
+        </band>
+    </detail>
+
+    <!-- SUMARIO -->
+    <summary>
+        <band height="40">
+            <staticText>
+                <reportElement x="250" y="10" width="100" height="20" uuid="f5787974-5454-40f6-ac46-1db15620b71e"/>
+                <textElement textAlignment="Right">
+                    <font size="12" isBold="true"/>
+                </textElement>
+                <text><![CDATA[TOTAL MES:]]></text>
+            </staticText>
+            <textField pattern="$ #,##0.00">
+                <reportElement x="350" y="10" width="205" height="20" forecolor="#2E7D32" uuid="730f1434-5330-4af4-80f5-ff592f142474"/>
+                <textElement textAlignment="Right">
+                    <font size="12" isBold="true"/>
+                </textElement>
+                <textFieldExpression><![CDATA[$V{TOTAL_INGRESO}]]></textFieldExpression>
+            </textField>
+        </band>
+    </summary>
+
+</jasperReport>
+

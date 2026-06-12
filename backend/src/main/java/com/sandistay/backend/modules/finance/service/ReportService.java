@@ -19,6 +19,7 @@ import java.io.InputStream;
 import java.sql.Connection;
 import java.util.HashMap;
 import java.util.Map;
+import java.time.LocalDate;
 
 @Service
 public class ReportService {
@@ -126,5 +127,41 @@ public class ReportService {
         }
         
         return historial;
+    }
+    
+    /**
+     * Genera el PDF del reporte general de ocupación.
+     */
+    @Transactional(readOnly = true)
+    public byte[] generarReporteOcupacionPdf(LocalDate fechaInicio, LocalDate fechaFin) {
+        log.info("Generando PDF de ocupación del {} al {}", fechaInicio, fechaFin);
+
+        Map<String, Object> parametros = new HashMap<>();
+        // Convertimos LocalDate a java.sql.Date para que Jasper lo entienda
+        parametros.put("P_FECHA_INICIO", java.sql.Date.valueOf(fechaInicio));
+        parametros.put("P_FECHA_FIN", java.sql.Date.valueOf(fechaFin));
+
+        return compilarYGenerarPdfConParametros("reports/reporte_ocupacion.jrxml", parametros);
+    }
+
+    /**
+     * Método privado refactorizado para aceptar cualquier mapa de parámetros.
+     */
+    private byte[] compilarYGenerarPdfConParametros(String rutaJrxml, Map<String, Object> parametros) {
+        try {
+            InputStream reportStream = new ClassPathResource(rutaJrxml).getInputStream();
+            JasperReport jasperReport = JasperCompileManager.compileReport(reportStream);
+
+            Connection connection = org.springframework.jdbc.datasource.DataSourceUtils.getConnection(dataSource);
+            try {
+                JasperPrint jasperPrint = JasperFillManager.fillReport(jasperReport, parametros, connection);
+                return JasperExportManager.exportReportToPdf(jasperPrint);
+            } finally {
+                org.springframework.jdbc.datasource.DataSourceUtils.releaseConnection(connection, dataSource);
+            }
+        } catch (Exception e) {
+            log.error("Error al generar el PDF: {}", e.getMessage());
+            throw new RuntimeException("No se pudo generar el reporte PDF.");
+        }
     }
 }

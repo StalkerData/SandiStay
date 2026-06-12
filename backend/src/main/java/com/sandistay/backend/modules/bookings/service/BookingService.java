@@ -1,5 +1,7 @@
 package com.sandistay.backend.modules.bookings.service;
 
+import com.sandistay.backend.modules.auth.repository.ClienteRepository;
+import com.sandistay.backend.modules.auth.repository.PersonaRepository;
 import com.sandistay.backend.modules.bookings.dto.BookingDetailResponse;
 import com.sandistay.backend.modules.bookings.dto.BookingResponse;
 import com.sandistay.backend.modules.bookings.dto.CreateBookingRequest;
@@ -21,6 +23,10 @@ import com.sandistay.backend.modules.payment.client.PaymentClient;
 import com.sandistay.backend.modules.payment.model.Pago;
 import com.sandistay.backend.modules.bookings.dto.CancelBookingRequest;
 import com.sandistay.backend.modules.bookings.dto.CancelBookingResponse;
+import com.sandistay.backend.modules.auth.model.Persona;
+import com.sandistay.backend.modules.auth.model.Cliente;
+import com.sandistay.backend.modules.auth.repository.PersonaRepository;
+import com.sandistay.backend.modules.auth.repository.ClienteRepository;
 import java.time.LocalDate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -41,6 +47,8 @@ public class BookingService {
     private final PaymentClient paymentClient; 
     private final ReservaViewRepository reservaViewRepository;
     private final ReservaHabitacionViewRepository reservaHabitacionViewRepository;
+    private final PersonaRepository personaRepository;
+    private final ClienteRepository clienteRepository;
 
 
     public BookingService(ReservaRepository reservaRepository,
@@ -50,7 +58,9 @@ public class BookingService {
             PagoRepository pagoRepository,
             PaymentClient paymentClient,
             ReservaViewRepository reservaViewRepository,
-            ReservaHabitacionViewRepository reservaHabitacionViewRepository) { 
+            ReservaHabitacionViewRepository reservaHabitacionViewRepository,
+            PersonaRepository personaRepository,
+            ClienteRepository clienteRepository) { 
 		this.reservaRepository = reservaRepository;
 		this.reservaHabitacionRepository = reservaHabitacionRepository;
 		this.reservaAreaRepository = reservaAreaRepository;
@@ -59,6 +69,8 @@ public class BookingService {
 		this.paymentClient = paymentClient;
 		this.reservaViewRepository = reservaViewRepository;
 		this.reservaHabitacionViewRepository = reservaHabitacionViewRepository;
+		this.personaRepository = personaRepository;
+		this.clienteRepository = clienteRepository;
 		}
 
     /**
@@ -81,7 +93,7 @@ public class BookingService {
         reserva.setCodigoReserva(generarCodigoUnico());
         reserva.setTipoReserva(request.tipoReserva());
         reserva.setIdCliente(idCliente);
-        reserva.setNombreHuesped(request.nombreHuesped());
+        reserva.setNombreHuesped(request.nombresHuesped() + " " + request.apellidosHuesped());
         reserva.setDocumentoHuesped(request.documentoHuesped());
         reserva.setTelefonoHuesped(request.telefonoHuesped());
         reserva.setNumeroAdultos(request.numeroAdultos() != null ? request.numeroAdultos() : 0);
@@ -102,14 +114,21 @@ public class BookingService {
         String mensajeFinal = "Reserva creada. Tienes 24 horas para realizar el pago.";
 
         // 5. PROCESAMIENTO DE PAGO (Solo si se envía en la misma petición, ej: Staff en efectivo o Wizard Web)
+        // 5. PROCESAMIENTO DE PAGO
         if (request.paymentTxId() != null && !request.paymentTxId().isBlank()) {
             
-            // Verificamos el pago con el Mock
-            boolean pagoValido = paymentClient.verifyPayment(request.paymentTxId()); 
-            if (!pagoValido) {
-                throw new RuntimeException("El pago no pudo ser verificado o fue rechazado por la pasarela.");
+            // LÓGICA DE EFECTIVO (Staff)
+            if ("EFECTIVO".equals(request.paymentTxId())) {
+                // Si es efectivo, no llamamos al Mock. Asumimos que la Secretaria ya tiene el dinero.
+                // No hacemos nada, dejamos que el flujo continúe y guarde el pago.
+            } else {
+                // LÓGICA DIGITAL (Guest Checkout)
+                boolean pagoValido = paymentClient.verifyPayment(request.paymentTxId()); 
+                if (!pagoValido) {
+                    throw new RuntimeException("El pago no pudo ser verificado o fue rechazado por la pasarela.");
+                }
             }
-
+            
             // Calculamos el total real
             ReservaTotalResponse totales = calculateTotal(reserva.getIdReserva());
             BigDecimal montoAPagar = totales.totalFinal();
@@ -123,7 +142,7 @@ public class BookingService {
             pago.setCodigoPago("PAG-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase());
             pago.setIdReserva(reserva.getIdReserva());
             pago.setMonto(montoAPagar); 
-            pago.setIdMetodoPago(2); // Asumimos Nequi por ahora
+            pago.setIdMetodoPago("EFECTIVO".equals(request.paymentTxId()) ? 1 : 2);
             pago.setNumeroReferencia(request.paymentTxId());
             pago.setIdEstadoPago(2); // APROBADO
             pago.setIdUsuarioRegistro(idUsuarioActual);
@@ -220,10 +239,37 @@ public class BookingService {
         return "RES-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase();
     }
 
-    // TODO: Mover al módulo de Clientes (ClienteService)
+    /**
+     * Busca si el huésped ya existe en la BD. Si no existe, crea la Persona y el Cliente.
+     * Esto evita duplicidad de datos (Data Deduplication).
+     */
     private Integer getOrCreateCliente(CreateBookingRequest request) {
-        // Simulamos que el cliente siempre es el ID 1 (Para que no falle la Foreign Key en BD)
-        return 1; 
+        // 1. Buscar o Crear Persona
+        Persona persona = personaRepository.findByNumeroDocumento(request.documentoHuesped())
+                .orElseGet(() -> {
+                    Persona nuevaPersona = new Persona();
+                    nuevaPersona.setNombres(request.nombresHuesped());
+                    nuevaPersona.setApellidos(request.apellidosHuesped());
+                    nuevaPersona.setIdTipoDocumento(request.idTipoDocumento());
+                    nuevaPersona.setNumeroDocumento(request.documentoHuesped());
+                    nuevaPersona.setEmail(request.emailHuesped());
+                    nuevaPersona.setTelefono(request.telefonoHuesped());
+                    nuevaPersona.setIdPais(request.idPais());
+                    nuevaPersona.setIdEstadoPersona(1); // 1 = ACTIVO
+                    return personaRepository.save(nuevaPersona);
+                });
+
+        // 2. Buscar o Crear Cliente asociado a esa Persona
+        Cliente cliente = clienteRepository.findByIdPersona(persona.getIdPersona())
+                .orElseGet(() -> {
+                    Cliente nuevoCliente = new Cliente();
+                    nuevoCliente.setIdPersona(persona.getIdPersona());
+                    nuevoCliente.setCodigoCliente("CLI-" + UUID.randomUUID().toString().substring(0, 6).toUpperCase());
+                    nuevoCliente.setIdTipoCliente(1); // 1 = REGULAR (Por defecto)
+                    return clienteRepository.save(nuevoCliente);
+                });
+
+        return cliente.getIdCliente();
     }
     
     
@@ -371,21 +417,22 @@ public class BookingService {
     /**
      * Obtiene el detalle completo de una reserva agrupando cabecera, ítems y pagos.
      */
-    public BookingDetailResponse getBookingFullDetails(Integer idReserva) {
         
-        // 1. Buscar la cabecera (Directo a la BD, mucho más rápido y eficiente)
-        ReservaView reserva = reservaViewRepository.findById(idReserva)
+    public BookingDetailResponse getBookingFullDetails(Integer idReserva) {
+        ReservaView reservaView = reservaViewRepository.findById(idReserva)
                 .orElseThrow(() -> new RuntimeException("Reserva no encontrada"));
 
-        // 2. Buscar los ítems (Habitaciones)
-        List<ReservaHabitacionView> items = reservaHabitacionViewRepository.findByIdReserva(idReserva);
+        // NUEVO: Buscamos la entidad real para extraer el idCliente
+        Reserva reservaEntity = reservaRepository.findById(idReserva)
+                .orElseThrow(() -> new RuntimeException("Reserva no encontrada"));
 
-        // 3. Buscar los pagos asociados
+        List<ReservaHabitacionView> items = reservaHabitacionViewRepository.findByIdReserva(idReserva);
         List<Pago> pagos = pagoRepository.findByIdReserva(idReserva);
 
-        // 4. Empaquetar y retornar
-        return new BookingDetailResponse(reserva, items, pagos);
+        // Pasamos el idCliente al DTO
+        return new BookingDetailResponse(reservaView, items, pagos, reservaEntity.getIdCliente());
     }
+    
     /**
      * Obtiene el cálculo financiero total de una reserva delegando a PostgreSQL.
      * Este método es utilizado tanto por el endpoint GET /{id}/total como internamente
@@ -406,5 +453,11 @@ public class BookingService {
                 projection.getTotalFinal()
         );
     }
+    
+
+
+    // ...
+
+   
     
 }

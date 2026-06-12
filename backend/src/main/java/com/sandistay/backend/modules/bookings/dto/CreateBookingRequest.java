@@ -33,10 +33,16 @@ public record CreateBookingRequest(
         // --- 3. CAPACIDAD ---
         Integer numeroAdultos,
         Integer numeroNinos,
-
+        
         // --- 4. DATOS DEL HUÉSPED (Guest Checkout) ---
-        @NotBlank(message = "El nombre del huésped es obligatorio")
-        String nombreHuesped,
+        @NotBlank(message = "Los nombres son obligatorios")
+        String nombresHuesped,
+
+        @NotBlank(message = "Los apellidos son obligatorios")
+        String apellidosHuesped,
+
+        @NotNull(message = "El tipo de documento es obligatorio")
+        Integer idTipoDocumento,
         
         @NotBlank(message = "El documento del huésped es obligatorio")
         String documentoHuesped,
@@ -47,6 +53,11 @@ public record CreateBookingRequest(
         
         String telefonoHuesped,
 
-        
+        @NotNull(message = "El país de origen es obligatorio")
+        Integer idPais,
+
+        // --- 5. PAGO (Opcional al momento de crear) ---
         String paymentTxId
+
+       
 ) {}

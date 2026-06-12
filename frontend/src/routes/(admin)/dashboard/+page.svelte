@@ -37,7 +37,20 @@
             <h2 class="text-2xl font-bold text-dark">Reservas Recientes</h2>
             <p class="text-sm text-neutral">Gestiona las llegadas y salidas del hotel.</p>
         </div>
-        <Button variant="outline" onclick={() => window.location.reload()}>↻ Actualizar</Button>
+        
+        <!-- BOTONES DE ACCIÓN PRINCIPALES -->
+        <div class="flex items-center gap-3">
+            <Button variant="outline" onclick={() => window.location.reload()}>
+                ↻ Actualizar
+            </Button>
+            
+            <!-- EL NUEVO BOTÓN OBLIGATORIO -->
+            <a href="/dashboard/bookings/new">
+                <Button variant="primary" class="shadow-md shadow-primary/20">
+                    + Nueva Reserva (Walk-in)
+                </Button>
+            </a>
+        </div>
     </div>
 
     <!-- ALERTAS DE ÉXITO O ERROR -->

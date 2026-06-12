@@ -13,5 +13,6 @@ import java.util.List;
 public record BookingDetailResponse(
         ReservaView reserva,
         List<ReservaHabitacionView> items,
-        List<Pago> pagos
+        List<Pago> pagos,
+        Integer idCliente 
 ) {}
