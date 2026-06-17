@@ -55,9 +55,12 @@ public record CreateBookingRequest(
 
         @NotNull(message = "El país de origen es obligatorio")
         Integer idPais,
+        
+        // --- OPCIONES DE PAGO ---
+        // Si es true, el cliente paga el 100% del Área. Si es false o null, paga el 30%.
+        Boolean pagoCompleto,
 
         // --- 5. PAGO (Opcional al momento de crear) ---
         String paymentTxId
 
-       
 ) {}

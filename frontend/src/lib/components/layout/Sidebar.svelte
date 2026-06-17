@@ -6,19 +6,21 @@
     let userRole = $derived($page.data.userRole || 'STAFF');
     let username = $derived($page.data.username || 'Usuario');
 
-    // Agregamos "Mi Perfil" a los menús base para que la Secretaria también lo vea
     const baseMenuItems = [
         { name: 'Reservas', path: '/dashboard', icon: '📅' },
         { name: 'Catálogo', path: '/settings/catalog', icon: '🛏️' },
+        { name: 'CRM Clientes', path: '/crm', icon: '🤝' }, 
         { name: 'Reportes', path: '/reports', icon: '📈' },
         { name: 'Mi Perfil', path: '/settings/profile', icon: '👤' }
     ];
 
     const adminMenuItems = [
+        { name: 'Tesorería', path: '/finance/treasury', icon: '💰' },
         { name: 'Usuarios', path: '/settings/users', icon: '👥' }
     ];
 
     let menuItems = $derived(userRole === 'ADMIN' ? [...baseMenuItems, ...adminMenuItems] : baseMenuItems);
+    
 
     function isActive(itemPath: string, current: string) {
         if (itemPath === '/dashboard') {

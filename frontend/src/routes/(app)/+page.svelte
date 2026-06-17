@@ -2,6 +2,7 @@
     import Button from '$lib/components/ui/Button.svelte';
     import Input from '$lib/components/ui/Input.svelte';
     import Card from '$lib/components/ui/Card.svelte';
+    import { goto } from '$app/navigation'; // Asegúrate de tener esta importación arriba
     import type { PageData } from './$types';
 
     // 1. Recibimos los datos inyectados por +page.server.ts (SSR)
@@ -12,11 +13,10 @@
     let checkOut = $state('');
     let huespedes = $state(2);
 
-    // Función para manejar la búsqueda (Por ahora solo visual)
     function handleSearch(e: Event) {
         e.preventDefault();
-        console.log(`Buscando para ${huespedes} personas del ${checkIn} al ${checkOut}`);
-        // TODO: Redirigir a la página de resultados con los filtros en la URL
+        // Redirigimos a la página de habitaciones pasando los parámetros en la URL
+        goto(`/rooms?fechaInicio=${checkIn}&fechaFin=${checkOut}&adultos=${huespedes}`);
     }
 </script>
 

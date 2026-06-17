@@ -14,6 +14,7 @@
 
 	// --- ESTADO DEL WIZARD ---
 	let pasoActual = $state(1); // 1 = Datos, 2 = Pago
+	let comprobantePago = $state(''); // <--- VARIABLE PARA EL COMPROBANTE REAL
 
 	// --- ESTADO DEL FORMULARIO ---
 	let fechaInicio = $state('');
@@ -30,9 +31,34 @@
 	let emailHuesped = $state('');
 	let telefonoHuesped = $state('');
 	let idPais = $state(1); // 1 = Colombia por defecto
-	let metodoPago = $state('NEQUI');
+	
+    let metodoPago = $state('NEQUI');
 	let isSubmitting = $state(false);
 	let errorMessage = $state('');
+
+	// --- NUEVO: ESTADO PARA PAGO FLEXIBLE DE ÁREAS ---
+	let pagoCompleto = $state(false); // Por defecto, pagan el 30% en áreas
+
+    // --- CALCULADORA REACTIVA EN TIEMPO REAL ---
+    let cantidadTiempo = $derived.by(() => {
+        if (tipoReserva === 'Habitacion' && fechaInicio && fechaFin) {
+            const diffTime = Math.abs(new Date(fechaFin).getTime() - new Date(fechaInicio).getTime());
+            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+            return diffDays > 0 ? diffDays : 0;
+        } else if (tipoReserva === 'Area' && horaInicio && horaFin) {
+            const start = new Date(`1970-01-01T${horaInicio}`);
+            const end = new Date(`1970-01-01T${horaFin}`);
+            const diffHrs = (end.getTime() - start.getTime()) / (1000 * 60 * 60);
+            return diffHrs > 0 ? diffHrs : 0;
+        }
+        return 0;
+    });
+
+    let precioBase = $derived(tipoReserva === 'Habitacion' ? item.precioNoche : item.precioHora);
+    let totalReserva = $derived(cantidadTiempo * precioBase);
+    
+    // AHORA LA CALCULADORA RESPETA SI EL CLIENTE QUIERE PAGAR COMPLETO
+    let totalAPagarHoy = $derived(tipoReserva === 'Habitacion' || pagoCompleto ? totalReserva : totalReserva * 0.30);
 
 	// Avanzar al paso de pago
 	function irAlPago(e: Event) {
@@ -52,23 +78,24 @@
 		errorMessage = '';
 
 		const payload = {
-			tipoReserva: tipoReserva,
-			itemId: item.id || item.idArea,
-			fechaInicio: fechaInicio,
-			fechaFin: tipoReserva === 'Habitacion' ? fechaFin : null,
-			horaInicio: tipoReserva === 'Area' ? horaInicio + ':00' : null,
-			horaFin: tipoReserva === 'Area' ? horaFin + ':00' : null,
-			numeroAdultos: numeroAdultos,
-			numeroNinos: tipoReserva === 'Habitacion' ? numeroNinos : 0,
-			nombresHuesped: nombresHuesped,
-			apellidosHuesped: apellidosHuesped,
-			idTipoDocumento: idTipoDocumento,
-			documentoHuesped: documentoHuesped,
-			emailHuesped: emailHuesped,
-			telefonoHuesped: telefonoHuesped,
-			idPais: idPais,
-			paymentTxId: `MOCK-${Math.floor(Math.random() * 1000000)}`
-		};
+            tipoReserva: tipoReserva,
+            itemId: item.id || item.idArea,
+            fechaInicio: fechaInicio,
+            fechaFin: tipoReserva === 'Habitacion' ? fechaFin : null,
+            horaInicio: tipoReserva === 'Area' ? horaInicio + ':00' : null,
+            horaFin: tipoReserva === 'Area' ? horaFin + ':00' : null,
+            numeroAdultos: numeroAdultos,
+            numeroNinos: tipoReserva === 'Habitacion' ? numeroNinos : 0,
+            nombresHuesped: nombresHuesped,
+            apellidosHuesped: apellidosHuesped,
+            idTipoDocumento: idTipoDocumento,
+            documentoHuesped: documentoHuesped,
+            emailHuesped: emailHuesped,
+            telefonoHuesped: telefonoHuesped,
+            idPais: idPais,
+            pagoCompleto: pagoCompleto, // <--- ENVIAMOS LA DECISIÓN A JAVA
+            paymentTxId: comprobantePago 
+        };
 
 		try {
 			const res = await fetch('http://localhost:8082/api/v1/bookings', {
@@ -136,7 +163,7 @@
 				<!-- PASO 1: FORMULARIO DE DATOS -->
 				<form id="datosForm" onsubmit={irAlPago} class="space-y-8">
 					<section class="rounded-xl border border-neutral/10 bg-surface p-6 shadow-sm">
-						<h2 class="mb-4 text-xl font-bold text-secondary">Fechas de Estadía</h2>
+						<h2 class="mb-4 text-xl font-bold text-secondary">1. Fechas de Estadía</h2>
 						<div class="grid grid-cols-1 gap-4 md:grid-cols-2">
 							{#if tipoReserva === 'Habitacion'}
 								<Input
@@ -262,7 +289,7 @@
 					class="animate-fade-in rounded-xl border border-neutral/10 bg-surface p-6 shadow-sm"
 				>
 					<div class="mb-6 flex items-center justify-between">
-						<h2 class="text-xl font-bold text-secondary">Selecciona tu método de pago</h2>
+						<h2 class="text-xl font-bold text-secondary">3. Pago Seguro</h2>
 						<button
 							onclick={volverADatos}
 							class="text-sm text-neutral underline hover:text-primary"
@@ -293,10 +320,10 @@
 					</div>
 
 					<div
-						class="flex flex-col items-center rounded-lg border border-neutral/20 bg-base/50 p-6 text-center"
+						class="mb-6 flex flex-col items-center rounded-lg border border-neutral/20 bg-base/50 p-6 text-center"
 					>
 						<p class="mb-4 text-sm text-neutral">
-							Escanea el código QR desde tu celular para transferir.
+							1. Escanea el código QR desde tu app de {metodoPago} y transfiere el valor exacto.
 						</p>
 						<img
 							src={`/assets/qr/${metodoPago.toLowerCase()}.png`}
@@ -305,10 +332,22 @@
 							onerror={(e) =>
 								(e.currentTarget.src = 'https://via.placeholder.com/200?text=QR+Mock')}
 						/>
-						<p class="text-xs font-bold text-primary">
-							MODO PRUEBA: Al hacer clic en "Simular Pago", el sistema aprobará la transacción.
+						<p class="text-sm text-neutral mt-2">
+							2. Una vez realizada la transferencia, ingresa el número de comprobante abajo.
 						</p>
 					</div>
+
+                    <!-- NUEVO CAMPO PARA EL COMPROBANTE -->
+                    <div class="bg-surface p-4 rounded-lg border border-primary/30">
+                        <Input 
+                            id="comprobante" 
+                            label="Número de Comprobante / Referencia" 
+                            type="text" 
+                            bind:value={comprobantePago} 
+                            required 
+                            placeholder="Ej: NEQ-111"
+                        />
+                    </div>
 				</section>
 			{/if}
 		</div>
@@ -328,18 +367,49 @@
 					/>
 					<div>
 						<p class="font-bold text-dark">{item.nombre}</p>
-						<p class="text-sm text-neutral">{item.tipo}</p>
+						<p class="text-sm text-neutral">{item.tipo || item.tipoArea}</p>
 					</div>
 				</div>
 
 				<div class="mb-6 space-y-3 text-sm">
 					<div class="flex justify-between">
-						<span class="text-neutral">Precio por noche</span>
-						<span class="font-medium">${item.precioNoche.toLocaleString('es-CO')}</span>
+						<span class="text-neutral">{tipoReserva === 'Habitacion' ? 'Precio por noche' : 'Precio por hora'}</span>
+						<span class="font-medium">${precioBase.toLocaleString('es-CO')}</span>
 					</div>
 					<div class="flex justify-between">
-						<span class="text-neutral">Impuestos (IVA 19%)</span>
-						<span class="font-medium">Incluidos</span>
+						<span class="text-neutral">{tipoReserva === 'Habitacion' ? 'Noches' : 'Horas'} seleccionadas</span>
+						<span class="font-medium">{cantidadTiempo}</span>
+					</div>
+					<div class="flex justify-between border-t border-neutral/10 pt-3 mb-4">
+						<span class="font-bold text-dark">Total Reserva</span>
+						<span class="font-bold text-dark">${totalReserva.toLocaleString('es-CO')}</span>
+					</div>
+					
+					<!-- NUEVO: OPCIONES DE PAGO PARA ÁREAS -->
+					{#if tipoReserva === 'Area'}
+						<div class="bg-base/50 p-3 rounded-lg border border-neutral/20 mb-4">
+							<p class="text-sm font-bold text-dark mb-2">Opciones de Pago:</p>
+							<div class="flex flex-col gap-2">
+								<label class="flex items-center gap-2 cursor-pointer">
+									<input type="radio" bind:group={pagoCompleto} value={false} class="text-primary focus:ring-primary">
+									<span class="text-sm">Pagar Anticipo (30%)</span>
+								</label>
+								<label class="flex items-center gap-2 cursor-pointer">
+									<input type="radio" bind:group={pagoCompleto} value={true} class="text-primary focus:ring-primary">
+									<span class="text-sm">Pagar Totalidad (100%)</span>
+								</label>
+							</div>
+						</div>
+					{/if}
+					
+					<div class="mt-4 rounded-lg bg-primary/10 p-4 border border-primary/20">
+						<div class="flex justify-between items-center">
+							<span class="font-bold text-primary">Total a Pagar HOY:</span>
+							<span class="font-bold text-xl text-primary">${totalAPagarHoy.toLocaleString('es-CO')}</span>
+						</div>
+						{#if tipoReserva === 'Area' && !pagoCompleto}
+							<p class="text-xs text-primary/80 mt-1 text-right">(Anticipo del 30%)</p>
+						{/if}
 					</div>
 				</div>
 
@@ -358,9 +428,9 @@
 						onclick={handlePayment}
 						variant="primary"
 						class="w-full py-3 text-lg"
-						disabled={isSubmitting}
+						disabled={isSubmitting || !comprobantePago}
 					>
-						{isSubmitting ? 'Procesando...' : 'Simular Pago y Reservar'}
+						{isSubmitting ? 'Verificando en el Banco...' : 'Verificar Pago y Reservar'}
 					</Button>
 				{/if}
 			</div>

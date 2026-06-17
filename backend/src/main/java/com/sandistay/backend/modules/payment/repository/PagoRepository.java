@@ -14,4 +14,10 @@ public interface PagoRepository extends JpaRepository<Pago, Integer> {
      * Útil para encontrar el pago original que vamos a "Cancelar" lógicamente.
      */
     List<Pago> findByIdReserva(Integer idReserva);
+    
+    /**
+     * Busca todos los pagos que se encuentran en un estado específico.
+     * Útil para buscar los reembolsos pendientes (Estado 5 = A_DEVOLVER).
+     */
+    List<Pago> findByIdEstadoPago(Integer idEstadoPago);
 }

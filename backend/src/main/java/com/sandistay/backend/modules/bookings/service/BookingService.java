@@ -18,6 +18,12 @@ import com.sandistay.backend.modules.bookings.repository.ReservaHabitacionViewRe
 import com.sandistay.backend.modules.bookings.repository.ReservaRepository;
 import com.sandistay.backend.modules.bookings.repository.ReservaViewRepository;
 import com.sandistay.backend.modules.rooms.repository.CatalogRepository;
+import com.sandistay.backend.modules.rooms.repository.HabitacionRepository;
+import com.sandistay.backend.modules.rooms.repository.AreaRepository;
+import com.sandistay.backend.modules.rooms.model.Habitacion;
+import com.sandistay.backend.modules.rooms.model.Area;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import com.sandistay.backend.modules.payment.repository.PagoRepository;
 import com.sandistay.backend.modules.payment.client.PaymentClient;
 import com.sandistay.backend.modules.payment.model.Pago;
@@ -25,8 +31,7 @@ import com.sandistay.backend.modules.bookings.dto.CancelBookingRequest;
 import com.sandistay.backend.modules.bookings.dto.CancelBookingResponse;
 import com.sandistay.backend.modules.auth.model.Persona;
 import com.sandistay.backend.modules.auth.model.Cliente;
-import com.sandistay.backend.modules.auth.repository.PersonaRepository;
-import com.sandistay.backend.modules.auth.repository.ClienteRepository;
+import com.sandistay.backend.modules.payment.dto.PaymentVerificationResponse;
 import java.time.LocalDate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -35,32 +40,30 @@ import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.UUID;
 
-
 @Service
 public class BookingService {
-
-    private final ReservaRepository reservaRepository;
-    private final ReservaHabitacionRepository reservaHabitacionRepository;
-    private final ReservaAreaRepository reservaAreaRepository;
-    private final CatalogRepository catalogRepository;
-    private final PagoRepository pagoRepository;
-    private final PaymentClient paymentClient; 
-    private final ReservaViewRepository reservaViewRepository;
-    private final ReservaHabitacionViewRepository reservaHabitacionViewRepository;
-    private final PersonaRepository personaRepository;
-    private final ClienteRepository clienteRepository;
+	
+    private static final Logger log = LoggerFactory.getLogger(BookingService.class);
 
 
-    public BookingService(ReservaRepository reservaRepository,
-            ReservaHabitacionRepository reservaHabitacionRepository,
-            ReservaAreaRepository reservaAreaRepository,
-            CatalogRepository catalogRepository,
-            PagoRepository pagoRepository,
-            PaymentClient paymentClient,
-            ReservaViewRepository reservaViewRepository,
-            ReservaHabitacionViewRepository reservaHabitacionViewRepository,
-            PersonaRepository personaRepository,
-            ClienteRepository clienteRepository) { 
+	private final ReservaRepository reservaRepository;
+	private final ReservaHabitacionRepository reservaHabitacionRepository;
+	private final ReservaAreaRepository reservaAreaRepository;
+	private final CatalogRepository catalogRepository;
+	private final PagoRepository pagoRepository;
+	private final PaymentClient paymentClient;
+	private final ReservaViewRepository reservaViewRepository;
+	private final ReservaHabitacionViewRepository reservaHabitacionViewRepository;
+	private final PersonaRepository personaRepository;
+	private final ClienteRepository clienteRepository;
+	private final HabitacionRepository habitacionRepository;
+    private final AreaRepository areaRepository;
+
+	public BookingService(ReservaRepository reservaRepository, ReservaHabitacionRepository reservaHabitacionRepository,
+			ReservaAreaRepository reservaAreaRepository, CatalogRepository catalogRepository,
+			PagoRepository pagoRepository, PaymentClient paymentClient, ReservaViewRepository reservaViewRepository,
+			ReservaHabitacionViewRepository reservaHabitacionViewRepository, PersonaRepository personaRepository,
+			ClienteRepository clienteRepository, HabitacionRepository habitacionRepository, AreaRepository areaRepository) {
 		this.reservaRepository = reservaRepository;
 		this.reservaHabitacionRepository = reservaHabitacionRepository;
 		this.reservaAreaRepository = reservaAreaRepository;
@@ -71,132 +74,150 @@ public class BookingService {
 		this.reservaHabitacionViewRepository = reservaHabitacionViewRepository;
 		this.personaRepository = personaRepository;
 		this.clienteRepository = clienteRepository;
+		this.habitacionRepository = habitacionRepository;
+        this.areaRepository = areaRepository;
+	}
+
+	/**
+	 * Orquesta la creación de una reserva.
+	 * 
+	 * @Transactional garantiza que si algo falla (ej. el pago es rechazado), se
+	 *                hace un ROLLBACK automático en la base de datos.
+	 */
+
+	@Transactional
+	public BookingResponse createBooking(CreateBookingRequest request, Integer idUsuarioActual) {
+
+		// 1. VALIDACIÓN DE NEGOCIO (Disponibilidad)
+		validarDisponibilidad(request);
+
+		// 2. GESTIÓN DEL CLIENTE
+		Integer idCliente = getOrCreateCliente(request);
+
+		// 3. PERSISTENCIA: Crear Cabecera de Reserva (SIEMPRE NACE PENDIENTE)
+		Reserva reserva = new Reserva();
+		reserva.setCodigoReserva(generarCodigoUnico());
+		reserva.setTipoReserva(request.tipoReserva());
+		reserva.setIdCliente(idCliente);
+		reserva.setNombreHuesped(request.nombresHuesped() + " " + request.apellidosHuesped());
+		reserva.setDocumentoHuesped(request.documentoHuesped());
+		reserva.setTelefonoHuesped(request.telefonoHuesped());
+		reserva.setNumeroAdultos(request.numeroAdultos() != null ? request.numeroAdultos() : 0);
+		reserva.setNumeroNinos(request.numeroNinos() != null ? request.numeroNinos() : 0);
+		reserva.setIdEstadoReserva(1); // 1 = PENDIENTE (Esperando pago)
+		reserva.setIdUsuarioCreacion(idUsuarioActual);
+
+		reserva = reservaRepository.save(reserva);
+
+		// 4. PERSISTENCIA: Crear Detalle (Habitación o Área)
+		if ("Habitacion".equalsIgnoreCase(request.tipoReserva())) {
+			guardarDetalleHabitacion(request, reserva.getIdReserva());
+		} else {
+			guardarDetalleArea(request, reserva.getIdReserva());
 		}
 
-    /**
-     * Orquesta la creación de una reserva.
-     * @Transactional garantiza que si algo falla (ej. el pago es rechazado), 
-     * se hace un ROLLBACK automático en la base de datos.
-     */
-   
-    @Transactional
-    public BookingResponse createBooking(CreateBookingRequest request, Integer idUsuarioActual) {
+		String estadoFinalString = "PENDIENTE";
+		String mensajeFinal = "Reserva creada. Tienes 24 horas para realizar el pago.";
 
-        // 1. VALIDACIÓN DE NEGOCIO (Disponibilidad)
-        validarDisponibilidad(request);
 
-        // 2. GESTIÓN DEL CLIENTE
-        Integer idCliente = getOrCreateCliente(request);
+		// =========================================================
+		// 5. PROCESAMIENTO DE PAGO Y CONCILIACIÓN BANCARIA
+		// =========================================================
+		if (request.paymentTxId() != null && !request.paymentTxId().isBlank()) {
 
-        // 3. PERSISTENCIA: Crear Cabecera de Reserva (SIEMPRE NACE PENDIENTE)
-        Reserva reserva = new Reserva();
-        reserva.setCodigoReserva(generarCodigoUnico());
-        reserva.setTipoReserva(request.tipoReserva());
-        reserva.setIdCliente(idCliente);
-        reserva.setNombreHuesped(request.nombresHuesped() + " " + request.apellidosHuesped());
-        reserva.setDocumentoHuesped(request.documentoHuesped());
-        reserva.setTelefonoHuesped(request.telefonoHuesped());
-        reserva.setNumeroAdultos(request.numeroAdultos() != null ? request.numeroAdultos() : 0);
-        reserva.setNumeroNinos(request.numeroNinos() != null ? request.numeroNinos() : 0);
-        reserva.setIdEstadoReserva(1); // 1 = PENDIENTE (Esperando pago)
-        reserva.setIdUsuarioCreacion(idUsuarioActual);
-        
-        reserva = reservaRepository.save(reserva);
+			// A. Calculamos cuánto DEBE pagar el cliente
+			ReservaTotalResponse totales = calculateTotal(reserva.getIdReserva());
+			BigDecimal montoAPagar = totales.totalFinal();
 
-        // 4. PERSISTENCIA: Crear Detalle (Habitación o Área)
-        if ("Habitacion".equalsIgnoreCase(request.tipoReserva())) {
-            guardarDetalleHabitacion(request, reserva.getIdReserva());
-        } else {
-            guardarDetalleArea(request, reserva.getIdReserva());
-        }
+			// 2. Lógica de Anticipo para Áreas Sociales
+	        if ("Area".equalsIgnoreCase(request.tipoReserva())) {
+	            // Si el cliente NO marcó "pagoCompleto", le cobramos solo el 30%
+	            if (request.pagoCompleto() == null || !request.pagoCompleto()) {
+	                montoAPagar = montoAPagar.multiply(new BigDecimal("0.30"));
+	            }
+	        }
 
-        String estadoFinalString = "PENDIENTE";
-        String mensajeFinal = "Reserva creada. Tienes 24 horas para realizar el pago.";
+			// B. Lógica de Efectivo (Staff)
+			if ("EFECTIVO".equals(request.paymentTxId())) {
+				// Asumimos que la Secretaria ya tiene el dinero físico
+				log.info("Pago en efectivo registrado por el Staff.");
+			}
+			// C. Lógica Digital (Conciliación con el Mock de Python)
+			else {
 
-        // 5. PROCESAMIENTO DE PAGO (Solo si se envía en la misma petición, ej: Staff en efectivo o Wizard Web)
-        // 5. PROCESAMIENTO DE PAGO
-        if (request.paymentTxId() != null && !request.paymentTxId().isBlank()) {
-            
-            // LÓGICA DE EFECTIVO (Staff)
-            if ("EFECTIVO".equals(request.paymentTxId())) {
-                // Si es efectivo, no llamamos al Mock. Asumimos que la Secretaria ya tiene el dinero.
-                // No hacemos nada, dejamos que el flujo continúe y guarde el pago.
-            } else {
-                // LÓGICA DIGITAL (Guest Checkout)
-                boolean pagoValido = paymentClient.verifyPayment(request.paymentTxId()); 
-                if (!pagoValido) {
-                    throw new RuntimeException("El pago no pudo ser verificado o fue rechazado por la pasarela.");
-                }
-            }
-            
-            // Calculamos el total real
-            ReservaTotalResponse totales = calculateTotal(reserva.getIdReserva());
-            BigDecimal montoAPagar = totales.totalFinal();
+				PaymentVerificationResponse bankResponse = paymentClient.verifyPayment(request.paymentTxId());
 
-            if ("Area".equalsIgnoreCase(request.tipoReserva())) {
-                montoAPagar = montoAPagar.multiply(new BigDecimal("0.30")); // Anticipo 30%
-            }
+				if (!bankResponse.found()) {
+					throw new RuntimeException("Pago rechazado: " + bankResponse.message());
+				}
 
-            // Guardamos el pago
-            Pago pago = new Pago();
-            pago.setCodigoPago("PAG-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase());
-            pago.setIdReserva(reserva.getIdReserva());
-            pago.setMonto(montoAPagar); 
-            pago.setIdMetodoPago("EFECTIVO".equals(request.paymentTxId()) ? 1 : 2);
-            pago.setNumeroReferencia(request.paymentTxId());
-            pago.setIdEstadoPago(2); // APROBADO
-            pago.setIdUsuarioRegistro(idUsuarioActual);
-            pago.setObservaciones("Pago procesado al momento de la reserva.");
-            pagoRepository.save(pago);
+				// ¡LA PRUEBA ANTI-FRAUDE! Comparamos el monto del banco con el monto a pagar
+				// Usamos compareTo() porque en BigDecimal 320000.0 es igual a 320000.00
+				if (bankResponse.amount().compareTo(montoAPagar) != 0) {
+					throw new RuntimeException(
+							String.format("Fraude detectado: El comprobante es por $%s, pero la reserva requiere $%s.",
+									bankResponse.amount(), montoAPagar));
+				}
+			}
 
-            // Actualizamos el estado de la reserva si es Habitación
-            if ("Habitacion".equalsIgnoreCase(request.tipoReserva())) {
-                reserva.setIdEstadoReserva(2); // 2 = CONFIRMADA
-                reservaRepository.save(reserva);
-                estadoFinalString = "CONFIRMADA";
-                mensajeFinal = "Reserva creada y pagada exitosamente.";
-            } else {
-                mensajeFinal = "Reserva creada. Anticipo del 30% recibido. Saldo pendiente.";
-            }
-        }
+			// D. Guardamos el recibo en nuestra base de datos
+			Pago pago = new Pago();
+			pago.setCodigoPago("PAG-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase());
+			pago.setIdReserva(reserva.getIdReserva());
+			pago.setMonto(montoAPagar);
+			pago.setIdMetodoPago("EFECTIVO".equals(request.paymentTxId()) ? 1 : 2);
+			pago.setNumeroReferencia(request.paymentTxId());
+			pago.setIdEstadoPago(2); // APROBADO
+			pago.setIdUsuarioRegistro(idUsuarioActual);
+			pago.setObservaciones("Pago conciliado exitosamente.");
+			pagoRepository.save(pago);
 
-        // 6. RETORNAR RESPUESTA AL FRONTEND
-        return new BookingResponse(
-                reserva.getCodigoReserva(),
-                estadoFinalString,
-                mensajeFinal
-        );
-    }
+			// E. Actualizamos el estado de la reserva
+			if ("Habitacion".equalsIgnoreCase(request.tipoReserva())) {
+				reserva.setIdEstadoReserva(2); // CONFIRMADA
+				reservaRepository.save(reserva);
+				estadoFinalString = "CONFIRMADA";
+				mensajeFinal = "Reserva creada y pago conciliado exitosamente.";
+			} else {
+				mensajeFinal = "Reserva creada. Anticipo del 30% conciliado. Saldo pendiente.";
+			}
+		}
+		// 6. RETORNAR RESPUESTA AL FRONTEND
+		return new BookingResponse(reserva.getCodigoReserva(), estadoFinalString, mensajeFinal);
+	}
 
-    // =================================================================================
-    // MÉTODOS PRIVADOS DE APOYO (Lógica Interna)
-    // =================================================================================
+	// =================================================================================
+	// MÉTODOS PRIVADOS DE APOYO (Lógica Interna)
+	// =================================================================================
 
-    private void validarDisponibilidad(CreateBookingRequest request) {
-        if ("Habitacion".equalsIgnoreCase(request.tipoReserva())) {
-            // Consultamos la función SQL a través del repositorio
-            boolean disponible = catalogRepository.findAvailableRooms(
-                    request.fechaInicio(), request.fechaFin(),
-                    request.numeroAdultos(), request.numeroNinos(), null
-            ).stream().anyMatch(room -> room.getIdHabitacion().equals(request.itemId()));
+	private void validarDisponibilidad(CreateBookingRequest request) {
+		if ("Habitacion".equalsIgnoreCase(request.tipoReserva())) {
+			// Consultamos la función SQL a través del repositorio
+			boolean disponible = catalogRepository
+					.findAvailableRooms(request.fechaInicio(), request.fechaFin(), request.numeroAdultos(),
+							request.numeroNinos(), null)
+					.stream().anyMatch(room -> room.getIdHabitacion().equals(request.itemId()));
 
-            if (!disponible) {
-                throw new RuntimeException("La habitación seleccionada no está disponible en esas fechas.");
-            }
-        } else {
-            // Consultamos la función SQL para áreas
-            boolean disponible = catalogRepository.findAvailableAreas(
-                    request.fechaInicio(), request.horaInicio(), request.horaFin(),
-                    request.numeroAdultos(), null
-            ).stream().anyMatch(area -> area.getIdArea().equals(request.itemId()));
+			if (!disponible) {
+				throw new RuntimeException("La habitación seleccionada no está disponible en esas fechas.");
+			}
+		} else {
+			// Consultamos la función SQL para áreas
+			boolean disponible = catalogRepository
+					.findAvailableAreas(request.fechaInicio(), request.horaInicio(), request.horaFin(),
+							request.numeroAdultos(), null)
+					.stream().anyMatch(area -> area.getIdArea().equals(request.itemId()));
 
-            if (!disponible) {
-                throw new RuntimeException("El área seleccionada no está disponible en ese horario.");
-            }
-        }
-    }
+			if (!disponible) {
+				throw new RuntimeException("El área seleccionada no está disponible en ese horario.");
+			}
+		}
+	}
 
-    private void guardarDetalleHabitacion(CreateBookingRequest request, Integer idReserva) {
+	private void guardarDetalleHabitacion(CreateBookingRequest request, Integer idReserva) {
+        Habitacion habitacion = habitacionRepository.findById(request.itemId())
+                .orElseThrow(() -> new RuntimeException("Habitación no encontrada"));
+
         ReservaHabitacion detalle = new ReservaHabitacion();
         detalle.setIdReserva(idReserva);
         detalle.setIdHabitacion(request.itemId());
@@ -204,17 +225,22 @@ public class BookingService {
         detalle.setFechaFin(request.fechaFin());
         
         long noches = ChronoUnit.DAYS.between(request.fechaInicio(), request.fechaFin());
+        if (noches < 1) throw new RuntimeException("La reserva debe ser de al menos 1 noche.");
+
         detalle.setNumeroNoches((int) noches);
-        detalle.setNumeroDias((int) noches + 1);
+        detalle.setNumeroDias(0); // Simplificamos: solo cobramos noches
         
-        // TODO: Obtener precios reales de la BD. Usamos valores dummy por ahora.
-        detalle.setPrecioNoche(new BigDecimal("250000.00"));
-        detalle.setPrecioDia(new BigDecimal("150000.00"));
+        // AHORA SÍ: PRECIOS REALES DE LA BD
+        detalle.setPrecioNoche(habitacion.getPrecioNoche());
+        detalle.setPrecioDia(BigDecimal.ZERO); 
         
         reservaHabitacionRepository.save(detalle);
     }
 
     private void guardarDetalleArea(CreateBookingRequest request, Integer idReserva) {
+        Area area = areaRepository.findById(request.itemId())
+                .orElseThrow(() -> new RuntimeException("Área no encontrada"));
+
         ReservaArea detalle = new ReservaArea();
         detalle.setIdReserva(idReserva);
         detalle.setIdArea(request.itemId());
@@ -223,10 +249,12 @@ public class BookingService {
         detalle.setHoraFin(request.horaFin());
         
         long minutos = ChronoUnit.MINUTES.between(request.horaInicio(), request.horaFin());
+        if (minutos <= 0) throw new RuntimeException("La hora de fin debe ser mayor a la hora de inicio.");
+        
         detalle.setDuracionHoras(BigDecimal.valueOf(minutos / 60.0));
         
-        // TODO: Obtener precios reales de la BD.
-        detalle.setPrecioHora(new BigDecimal("80000.00"));
+        // AHORA SÍ: PRECIOS REALES DE LA BD
+        detalle.setPrecioHora(area.getPrecioHora());
         detalle.setCantidadAsistentes(request.numeroAdultos());
         detalle.setRequiereAnticipo(true);
         detalle.setPorcentajeAnticipo(new BigDecimal("30.00"));
@@ -234,68 +262,90 @@ public class BookingService {
         reservaAreaRepository.save(detalle);
     }
 
-    private String generarCodigoUnico() {
-        // Genera un código tipo: RES-A1B2C3D4
-        return "RES-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase();
-    }
+	private String generarCodigoUnico() {
+		// Genera un código tipo: RES-A1B2C3D4
+		return "RES-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase();
+	}
 
-    /**
+	/**
      * Busca si el huésped ya existe en la BD. Si no existe, crea la Persona y el Cliente.
-     * Esto evita duplicidad de datos (Data Deduplication).
+     * Incluye validación estricta de identidad para evitar suplantación.
      */
     private Integer getOrCreateCliente(CreateBookingRequest request) {
-        // 1. Buscar o Crear Persona
-        Persona persona = personaRepository.findByNumeroDocumento(request.documentoHuesped())
-                .orElseGet(() -> {
-                    Persona nuevaPersona = new Persona();
-                    nuevaPersona.setNombres(request.nombresHuesped());
-                    nuevaPersona.setApellidos(request.apellidosHuesped());
-                    nuevaPersona.setIdTipoDocumento(request.idTipoDocumento());
-                    nuevaPersona.setNumeroDocumento(request.documentoHuesped());
-                    nuevaPersona.setEmail(request.emailHuesped());
-                    nuevaPersona.setTelefono(request.telefonoHuesped());
-                    nuevaPersona.setIdPais(request.idPais());
-                    nuevaPersona.setIdEstadoPersona(1); // 1 = ACTIVO
-                    return personaRepository.save(nuevaPersona);
-                });
+        // 1. Buscar Persona por documento
+        java.util.Optional<Persona> personaOpt = personaRepository.findByNumeroDocumento(request.documentoHuesped());
+        
+        Persona persona;
+        
+        if (personaOpt.isPresent()) {
+            // Si la persona ya existe en la BD, la extraemos
+            persona = personaOpt.get();
+            
+            // VALIDACIÓN DE IDENTIDAD (Anti-Suplantación)
+            // Comparamos ignorando mayúsculas/minúsculas. Si el email Y el nombre son distintos, bloqueamos.
+            boolean emailCoincide = persona.getEmail().equalsIgnoreCase(request.emailHuesped());
+            boolean nombreCoincide = persona.getNombres().equalsIgnoreCase(request.nombresHuesped());
+            
+            if (!emailCoincide && !nombreCoincide) {
+                throw new RuntimeException("El número de documento ya está registrado con otra identidad. Por favor verifique sus datos o contacte a recepción.");
+            }
+        } else {
+            // Si no existe, creamos una nueva Persona
+            Persona nuevaPersona = new Persona();
+            nuevaPersona.setNombres(request.nombresHuesped());
+            nuevaPersona.setApellidos(request.apellidosHuesped());
+            nuevaPersona.setIdTipoDocumento(request.idTipoDocumento());
+            nuevaPersona.setNumeroDocumento(request.documentoHuesped());
+            nuevaPersona.setEmail(request.emailHuesped());
+            nuevaPersona.setTelefono(request.telefonoHuesped());
+            nuevaPersona.setIdPais(request.idPais());
+            nuevaPersona.setIdEstadoPersona(1); // 1 = ACTIVO
+            
+            // Guardamos y asignamos a la variable principal
+            persona = personaRepository.save(nuevaPersona);
+        }
 
         // 2. Buscar o Crear Cliente asociado a esa Persona
+        // Aquí sí podemos usar orElseGet porque la lógica es muy simple y directa
         Cliente cliente = clienteRepository.findByIdPersona(persona.getIdPersona())
                 .orElseGet(() -> {
                     Cliente nuevoCliente = new Cliente();
                     nuevoCliente.setIdPersona(persona.getIdPersona());
-                    nuevoCliente.setCodigoCliente("CLI-" + UUID.randomUUID().toString().substring(0, 6).toUpperCase());
+                    nuevoCliente.setCodigoCliente("CLI-" + java.util.UUID.randomUUID().toString().substring(0, 6).toUpperCase());
                     nuevoCliente.setIdTipoCliente(1); // 1 = REGULAR (Por defecto)
                     return clienteRepository.save(nuevoCliente);
                 });
 
         return cliente.getIdCliente();
     }
-    
-    
-    /**
-     * Orquesta la cancelación de una reserva aplicando políticas de reembolso (Split Payment).
-     */
-    @Transactional
+	
+	/**
+	 * Orquesta la cancelación de una reserva aplicando políticas de reembolso
+	 * (Split Payment).
+	 */
+	@Transactional
     public CancelBookingResponse cancelBooking(Integer idReserva, CancelBookingRequest request, Integer idUsuarioActual) {
-        
-        // 1. Buscar la reserva
         Reserva reserva = reservaRepository.findById(idReserva)
                 .orElseThrow(() -> new RuntimeException("Reserva no encontrada"));
 
-        // Validar que no esté ya cancelada, en curso o completada (Estados 3, 4, 5, 6)
         if (reserva.getIdEstadoReserva() > 2) {
             throw new RuntimeException("La reserva no se puede cancelar en su estado actual.");
         }
 
-        // 2. Buscar el pago original aprobado (Estado 2 = APROBADO)
-        List<Pago> pagos = pagoRepository.findByIdReserva(idReserva);
-        Pago pagoOriginal = pagos.stream()
+        // 1. Buscar TODOS los pagos aprobados
+        List<Pago> pagosAprobados = pagoRepository.findByIdReserva(idReserva).stream()
                 .filter(p -> p.getIdEstadoPago() == 2)
-                .findFirst()
-                .orElseThrow(() -> new RuntimeException("No se encontró un pago aprobado para esta reserva."));
+                .toList();
 
-        BigDecimal montoPagado = pagoOriginal.getMonto();
+        if (pagosAprobados.isEmpty()) {
+            throw new RuntimeException("No se encontraron pagos aprobados para esta reserva.");
+        }
+
+        // 2. Sumar todo lo que el cliente ha pagado realmente
+        BigDecimal montoPagado = pagosAprobados.stream()
+                .map(Pago::getMonto)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+
         BigDecimal montoMulta = BigDecimal.ZERO;
         BigDecimal montoReembolso = BigDecimal.ZERO;
 
@@ -305,159 +355,139 @@ public class BookingService {
             long diasRestantes = ChronoUnit.DAYS.between(LocalDate.now(), detalle.getFechaInicio());
 
             if (diasRestantes >= 5) {
-                // Penalidad 35% del total pagado
                 montoMulta = montoPagado.multiply(new BigDecimal("0.35"));
                 montoReembolso = montoPagado.subtract(montoMulta);
             } else {
-                // Penalidad 100%
                 montoMulta = montoPagado;
                 montoReembolso = BigDecimal.ZERO;
             }
         } else {
-            // Es un Área Social
             ReservaArea detalle = reservaAreaRepository.findByIdReserva(idReserva).get(0);
             long diasRestantes = ChronoUnit.DAYS.between(LocalDate.now(), detalle.getFechaEvento());
-            
-            // Calculamos el valor TOTAL del evento para sacar el 15%
             BigDecimal valorTotalEvento = detalle.getPrecioHora().multiply(detalle.getDuracionHoras());
 
             if (diasRestantes >= 7) {
-                // Penalidad 15% del VALOR TOTAL
                 montoMulta = valorTotalEvento.multiply(new BigDecimal("0.15"));
-                // El reembolso es lo que depositó (30%) menos la multa (15%)
                 montoReembolso = montoPagado.subtract(montoMulta);
             } else {
-                // Pierde todo el depósito
                 montoMulta = montoPagado;
                 montoReembolso = BigDecimal.ZERO;
             }
         }
 
         // 4. SPLIT PAYMENT (Contabilidad)
-        // A. Anular lógicamente el pago original (Estado 4 = CANCELADO)
-        pagoOriginal.setIdEstadoPago(4);
-        pagoOriginal.setObservaciones("Anulado por cancelación. Reemplazado por Multa/Reembolso.");
-        pagoRepository.save(pagoOriginal);
+        // A. Anular lógicamente TODOS los pagos originales
+        for (Pago p : pagosAprobados) {
+            p.setIdEstadoPago(4);
+            p.setObservaciones(p.getObservaciones() + " | Anulado por cancelación.");
+            pagoRepository.save(p);
+        }
 
-        // B. Crear registro de Multa (Estado 2 = APROBADO/PAGADO)
+        // B. Crear registro de Multa
         Pago multa = new Pago();
         multa.setCodigoPago(generarCodigoUnico().replace("RES", "MUL"));
         multa.setIdReserva(idReserva);
         multa.setMonto(montoMulta);
-        multa.setIdMetodoPago(pagoOriginal.getIdMetodoPago());
+        multa.setIdMetodoPago(pagosAprobados.get(0).getIdMetodoPago());
         multa.setIdEstadoPago(2); 
         multa.setIdUsuarioRegistro(idUsuarioActual);
         multa.setObservaciones("Penalidad por cancelación aplicada.");
         pagoRepository.save(multa);
 
-        // C. Crear registro de Reembolso si aplica (Estado 5 = A_DEVOLVER)
+        // C. Crear registro de Reembolso
         if (montoReembolso.compareTo(BigDecimal.ZERO) > 0) {
             Pago reembolso = new Pago();
             reembolso.setCodigoPago(generarCodigoUnico().replace("RES", "DEV"));
             reembolso.setIdReserva(idReserva);
             reembolso.setMonto(montoReembolso);
-            reembolso.setIdMetodoPago(pagoOriginal.getIdMetodoPago());
+            reembolso.setIdMetodoPago(pagosAprobados.get(0).getIdMetodoPago());
             reembolso.setIdEstadoPago(5); 
             reembolso.setIdUsuarioRegistro(idUsuarioActual);
             reembolso.setObservaciones("Saldo a favor del cliente pendiente de devolución manual.");
             pagoRepository.save(reembolso);
         }
 
-        // 5. LLAMAR AL PROCEDIMIENTO ALMACENADO (Libera inventario y cambia estado)
         reservaRepository.llamarSpCancelarReserva(idReserva, request.motivo(), idUsuarioActual);
 
-        // 6. RETORNAR RESPUESTA
         return new CancelBookingResponse(
-                reserva.getCodigoReserva(),
-                "CANCELADA",
-                montoMulta,
-                montoReembolso,
+                reserva.getCodigoReserva(), "CANCELADA", montoMulta, montoReembolso,
                 "Reserva cancelada exitosamente. Inventario liberado."
         );
-        
     }
-    
-    /**
-     * Obtiene todas las reservas usando la vista optimizada de PostgreSQL.
-     */
-    public List<com.sandistay.backend.modules.bookings.model.ReservaView> getAllBookings() {
-        return reservaViewRepository.findAllByOrderByFechaReservaDesc();
-    }
-    
-    /**
-     * Obtiene los detalles de las habitaciones de una reserva usando la vista SQL.
-     */
-    public List<com.sandistay.backend.modules.bookings.model.ReservaHabitacionView> getDetallesHabitacion(Integer idReserva) {
-        return reservaHabitacionViewRepository.findByIdReserva(idReserva);
-    }
-    
-    /**
-     * Ejecuta el proceso de Check-out delegando la validación financiera a PostgreSQL.
-     */
-    @Transactional
-    public BookingResponse checkout(Integer idReserva, Integer idUsuarioActual) {
-        
-        // 1. Validar que la reserva exista
-        Reserva reserva = reservaRepository.findById(idReserva)
-                .orElseThrow(() -> new RuntimeException("Reserva no encontrada"));
 
-        // 2. Llamar al Procedimiento Almacenado
-        // Si el cliente tiene saldo pendiente, Postgres lanzará un RAISE EXCEPTION
-        // que Spring Boot atrapará y convertirá en un error HTTP automáticamente.
-        reservaRepository.llamarSpCompletarReserva(idReserva, idUsuarioActual);
+	/**
+	 * Obtiene todas las reservas usando la vista optimizada de PostgreSQL.
+	 */
+	public List<com.sandistay.backend.modules.bookings.model.ReservaView> getAllBookings() {
+		return reservaViewRepository.findAllByOrderByFechaReservaDesc();
+	}
 
-        // 3. Retornar respuesta de éxito
-        return new BookingResponse(
-                reserva.getCodigoReserva(),
-                "COMPLETADA",
-                "Check-out realizado exitosamente. Habitación enviada a limpieza."
-        );
-    }
-    
-    /**
-     * Obtiene el detalle completo de una reserva agrupando cabecera, ítems y pagos.
-     */
-        
-    public BookingDetailResponse getBookingFullDetails(Integer idReserva) {
-        ReservaView reservaView = reservaViewRepository.findById(idReserva)
-                .orElseThrow(() -> new RuntimeException("Reserva no encontrada"));
+	/**
+	 * Obtiene los detalles de las habitaciones de una reserva usando la vista SQL.
+	 */
+	public List<com.sandistay.backend.modules.bookings.model.ReservaHabitacionView> getDetallesHabitacion(
+			Integer idReserva) {
+		return reservaHabitacionViewRepository.findByIdReserva(idReserva);
+	}
 
-        // NUEVO: Buscamos la entidad real para extraer el idCliente
-        Reserva reservaEntity = reservaRepository.findById(idReserva)
-                .orElseThrow(() -> new RuntimeException("Reserva no encontrada"));
+	/**
+	 * Ejecuta el proceso de Check-out delegando la validación financiera a
+	 * PostgreSQL.
+	 */
+	@Transactional
+	public BookingResponse checkout(Integer idReserva, Integer idUsuarioActual) {
 
-        List<ReservaHabitacionView> items = reservaHabitacionViewRepository.findByIdReserva(idReserva);
-        List<Pago> pagos = pagoRepository.findByIdReserva(idReserva);
+		// 1. Validar que la reserva exista
+		Reserva reserva = reservaRepository.findById(idReserva)
+				.orElseThrow(() -> new RuntimeException("Reserva no encontrada"));
 
-        // Pasamos el idCliente al DTO
-        return new BookingDetailResponse(reservaView, items, pagos, reservaEntity.getIdCliente());
-    }
-    
-    /**
-     * Obtiene el cálculo financiero total de una reserva delegando a PostgreSQL.
-     * Este método es utilizado tanto por el endpoint GET /{id}/total como internamente
-     * durante la creación de la reserva para determinar el monto a cobrar.
-     */
-    public ReservaTotalResponse calculateTotal(Integer idReserva) {
-        // Llamamos a la proyección que creamos en ReservaRepository
-        ReservaTotalProjection projection = reservaRepository.calcularTotalReserva(idReserva);
-        
-        if (projection == null) {
-            throw new RuntimeException("No se pudo calcular el total para la reserva especificada.");
-        }
+		// 2. Llamar al Procedimiento Almacenado
+		// Si el cliente tiene saldo pendiente, Postgres lanzará un RAISE EXCEPTION
+		// que Spring Boot atrapará y convertirá en un error HTTP automáticamente.
+		reservaRepository.llamarSpCompletarReserva(idReserva, idUsuarioActual);
 
-        return new ReservaTotalResponse(
-                projection.getSubtotalHabitaciones(),
-                projection.getSubtotalAreas(),
-                projection.getDescuentoCliente(),
-                projection.getTotalFinal()
-        );
-    }
-    
+		// 3. Retornar respuesta de éxito
+		return new BookingResponse(reserva.getCodigoReserva(), "COMPLETADA",
+				"Check-out realizado exitosamente. Habitación enviada a limpieza.");
+	}
 
+	/**
+	 * Obtiene el detalle completo de una reserva agrupando cabecera, ítems y pagos.
+	 */
 
-    // ...
+	public BookingDetailResponse getBookingFullDetails(Integer idReserva) {
+		ReservaView reservaView = reservaViewRepository.findById(idReserva)
+				.orElseThrow(() -> new RuntimeException("Reserva no encontrada"));
 
-   
-    
+		// NUEVO: Buscamos la entidad real para extraer el idCliente
+		Reserva reservaEntity = reservaRepository.findById(idReserva)
+				.orElseThrow(() -> new RuntimeException("Reserva no encontrada"));
+
+		List<ReservaHabitacionView> items = reservaHabitacionViewRepository.findByIdReserva(idReserva);
+		List<Pago> pagos = pagoRepository.findByIdReserva(idReserva);
+
+		// Pasamos el idCliente al DTO
+		return new BookingDetailResponse(reservaView, items, pagos, reservaEntity.getIdCliente());
+	}
+
+	/**
+	 * Obtiene el cálculo financiero total de una reserva delegando a PostgreSQL.
+	 * Este método es utilizado tanto por el endpoint GET /{id}/total como
+	 * internamente durante la creación de la reserva para determinar el monto a
+	 * cobrar.
+	 */
+	public ReservaTotalResponse calculateTotal(Integer idReserva) {
+		// Llamamos a la proyección que creamos en ReservaRepository
+		ReservaTotalProjection projection = reservaRepository.calcularTotalReserva(idReserva);
+
+		if (projection == null) {
+			throw new RuntimeException("No se pudo calcular el total para la reserva especificada.");
+		}
+
+		return new ReservaTotalResponse(projection.getSubtotalHabitaciones(), projection.getSubtotalAreas(),
+				projection.getDescuentoCliente(), projection.getTotalFinal());
+	}
+
+	// ...
+
 }

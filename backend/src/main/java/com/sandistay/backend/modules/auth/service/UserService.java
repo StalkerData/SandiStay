@@ -39,6 +39,11 @@ public class UserService {
 
 	@Transactional
 	public UserResponse createUser(CreateUserRequest request) {
+		 // REGLA DE NEGOCIO: Solo puede existir un Administrador
+        if ("ADMIN".equalsIgnoreCase(request.rolCodigo())) {
+            throw new RuntimeException("Operación denegada: No se pueden crear más cuentas de Administrador. Solo se permite registrar personal STAFF.");
+        }
+        
 		// 1. Crear la Persona
 		Persona persona = new Persona();
 		persona.setNombres(request.nombres());

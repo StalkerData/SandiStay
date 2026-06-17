@@ -33,4 +33,4 @@ security:
 # Integraciones Externas (APIs)
 integration:
   payment:
-    url: ${PAYMENT_MOCK_URL:https://mocki.io/v1/9670a0b3-53f5-4922-a473-36b80c215ce0}
+    url: ${PAYMENT_MOCK_URL:http://localhost:8000/api/v1/bank/statement/verify}

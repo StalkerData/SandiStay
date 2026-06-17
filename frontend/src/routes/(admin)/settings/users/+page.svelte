@@ -132,10 +132,10 @@
                         <label for="rolCodigo" class="text-sm font-medium text-dark">Rol en el Sistema</label>
                         <select name="rolCodigo" bind:value={rolCodigo} class="px-3 py-2 border border-neutral/30 rounded-md bg-base/50">
                             <option value="STAFF">Secretaria / Recepción (STAFF)</option>
-                            <option value="ADMIN">Administrador (ADMIN)</option>
                         </select>
+                        <p class="text-xs text-neutral mt-1">Solo se permite la creación de cuentas operativas.</p>
                     </div>
-                </div>
+                </div> 
             </div>
 
             <div class="pt-4 border-t border-neutral/10 flex justify-end">

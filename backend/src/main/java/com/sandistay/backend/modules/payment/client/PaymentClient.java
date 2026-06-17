@@ -37,34 +37,25 @@ public class PaymentClient {
      * @param txId El ID de la transacción generada por el frontend (ej. Nequi/Daviplata).
      * @return true si el pago fue aprobado, false en caso de rechazo o error de red.
      */
-    public boolean verifyPayment(String txId) {
-        log.info("Iniciando verificación de pago en pasarela externa para txId: {}", txId);
+    /**
+     * Consulta el extracto bancario para verificar una transferencia.
+     */
+    public PaymentVerificationResponse verifyPayment(String receiptId) {
+        log.info("Consultando extracto bancario para el comprobante: {}", receiptId);
 
         try {
-            // 1. Ejecutamos la petición HTTP GET hacia Mocki.io
-            // Agregamos el txId como Query Parameter (?txId=...) por buenas prácticas, 
-            // aunque Mocki devolverá la respuesta estática que configuraste.
-            PaymentVerificationResponse response = restClient.get()
-                    .uri(paymentMockUrl + "?txId={txId}", txId)
+            return restClient.get()
+                    .uri(paymentMockUrl + "?receiptId={id}", receiptId)
                     .retrieve()
-                    .body(PaymentVerificationResponse.class); // 2. Mapeo automático de JSON a Record Java
-
-            // 3. Evaluamos la respuesta usando la lógica encapsulada en el DTO
-            if (response != null && response.isApproved()) {
-                log.info("Pago APROBADO por la pasarela para txId: {}", txId);
-                return true;
-            } else {
-                log.warn("Pago RECHAZADO por la pasarela para txId: {}", txId);
-                return false;
-            }
+                    .body(PaymentVerificationResponse.class);
 
         } catch (RestClientException e) {
-            log.error("Error crítico de comunicación con el Mock de Pagos: {}", e.getMessage());
-            // PATRÓN FALLBACK PARA PORTAFOLIO: 
-            // Si el servicio externo se cae o la URL expira, aprobamos el pago localmente 
-            // para garantizar que la demostración del sistema nunca se interrumpa.
-            log.warn("Fallback activado: Simulando aprobación de pago localmente.");
-            return true; 
+            log.error("Error crítico de comunicación con el Banco: {}", e.getMessage());
+            // Fallback seguro: Devolvemos un objeto con found = false
+            return new PaymentVerificationResponse(
+                    false, receiptId, null, null, null, null, null, 
+                    "Error de conexión con la red bancaria."
+            );
         }
     }
 }

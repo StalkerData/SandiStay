@@ -13,13 +13,11 @@ services:
       POSTGRES_USER: sandi_admin
       POSTGRES_PASSWORD: sandi_password123
       POSTGRES_DB: sandistay_db
-      TZ: America/Bogota # Zona horaria de Colombia
+      TZ: America/Bogota
     ports:
       - "5432:5432"
     volumes:
-      # Persistencia de datos (para no perder la BD al apagar Docker)
       - ./volumes/pg_data:/var/lib/postgresql/data
-      # TRUCO SENIOR: Auto-ejecutar scripts SQL al iniciar por primera vez
       - ./SQL_Files:/docker-entrypoint-initdb.d/
     networks:
       - sandistay-net
@@ -35,6 +33,16 @@ services:
       ADMINER_DEFAULT_SERVER: db
     depends_on:
       - db
+    networks:
+      - sandistay-net
+
+  # 3. NUEVO: Mock de Pasarela de Pagos (Python/FastAPI)
+  payment_mock:
+    build: ./payment_mock
+    container_name: sandistay_payment_mock
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
     networks:
       - sandistay-net
 

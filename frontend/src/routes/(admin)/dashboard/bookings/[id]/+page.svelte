@@ -1,14 +1,26 @@
 <script lang="ts">
     import type { PageData } from './$types';
     import Button from '$lib/components/ui/Button.svelte';
+    import { enhance } from '$app/forms';
+    import Input from '$lib/components/ui/Input.svelte';
+    import type { ActionData } from './$types';
 
-    let { data }: { data: PageData } = $props();
+    let { data, form }: { data: PageData, form: ActionData } = $props();
     
     let reserva = $derived(data.detalle.reserva);
     let items = $derived(data.detalle.items);
     let pagos = $derived(data.detalle.pagos);
     let balance = $derived(data.balance);
     let clientHistory = $derived(data.clientHistory);
+
+    // Variables para el Modal de Pago
+    let showPaymentModal = $state(false);
+    let isSubmitting = $state(false);
+    let metodoPago = $state('EFECTIVO');
+    let referencia = $state('');
+
+
+    
 </script>
 
 <svelte:head>
@@ -129,6 +141,15 @@
             {#if balance}
                 <div class="bg-surface p-6 rounded-xl shadow-sm border border-neutral/10">
                     <h3 class="text-lg font-bold text-secondary mb-4">Estado de Cuenta</h3>
+                    
+                    <!-- Alertas -->
+                    {#if form?.error}
+                        <div class="bg-red-100 text-red-700 p-3 rounded-md text-sm mb-4">{form.error}</div>
+                    {/if}
+                    {#if form?.success}
+                        <div class="bg-green-100 text-green-700 p-3 rounded-md text-sm mb-4">{form.message}</div>
+                    {/if}
+
                     <div class="space-y-3 text-sm">
                         <div class="flex justify-between">
                             <span class="text-neutral">Total Reserva</span>
@@ -144,10 +165,11 @@
                                 ${balance.saldoPendiente.toLocaleString('es-CO')}
                             </span>
                         </div>
+                        
+                        
                     </div>
                 </div>
             {/if}
-
             <!-- Tarjeta Historial de Pagos -->
             <div class="bg-surface p-6 rounded-xl shadow-sm border border-neutral/10">
                 <h3 class="text-lg font-bold text-secondary mb-4">Historial de Transacciones</h3>
@@ -172,3 +194,55 @@
         </div>
     </div>
 </div>
+
+<!-- MODAL DE PAGO DE SALDO -->
+{#if showPaymentModal}
+    <div class="fixed inset-0 bg-dark/60 flex items-center justify-center z-50 px-4 animate-fade-in">
+        <div class="bg-surface rounded-xl shadow-2xl max-w-md w-full p-6 border border-neutral/10">
+            <h3 class="text-xl font-bold text-dark mb-2">Registrar Pago</h3>
+            <p class="text-sm text-neutral mb-6">
+                El cliente debe <strong class="text-red-600">${balance.saldoPendiente.toLocaleString('es-CO')}</strong>.
+            </p>
+            
+            <form method="POST" action="?/payBalance" use:enhance={() => {
+                isSubmitting = true;
+                return async ({ update }) => {
+                    await update();
+                    isSubmitting = false;
+                    showPaymentModal = false;
+                };
+            }}>
+                <div class="space-y-4 mb-6">
+                    <div class="flex flex-col gap-1">
+                        <label for="metodoPago" class="text-sm font-medium text-dark">Método de Pago</label>
+                        <select name="metodoPago" bind:value={metodoPago} class="px-3 py-2 border border-neutral/30 rounded-md">
+                            <option value="EFECTIVO">Efectivo</option>
+                            <option value="DATAFONO">Tarjeta / Datáfono</option>
+                            <option value="TRANSFERENCIA">Transferencia Bancaria</option>
+                        </select>
+                    </div>
+                    
+                    {#if metodoPago !== 'EFECTIVO'}
+                        <Input 
+                            id="referencia" 
+                            name="referencia" 
+                            label="Número de Aprobación / Referencia" 
+                            type="text" 
+                            bind:value={referencia} 
+                            required 
+                        />
+                    {/if}
+                </div>
+                
+                <div class="flex justify-end gap-3">
+                    <Button type="button" variant="outline" onclick={() => showPaymentModal = false} disabled={isSubmitting}>
+                        Cancelar
+                    </Button>
+                    <Button type="submit" variant="primary" disabled={isSubmitting}>
+                        {isSubmitting ? 'Procesando...' : 'Confirmar Pago'}
+                    </Button>
+                </div>
+            </form>
+        </div>
+    </div>
+{/if}

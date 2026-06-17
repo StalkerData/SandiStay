@@ -9,6 +9,11 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
+import com.sandistay.backend.modules.auth.model.Persona;
+import com.sandistay.backend.modules.auth.model.Cliente;
+import com.sandistay.backend.modules.auth.repository.PersonaRepository;
+import com.sandistay.backend.modules.auth.repository.ClienteRepository;
+import java.util.Map;
 
 import java.time.LocalDate;
 import java.util.List;
@@ -19,9 +24,15 @@ import java.util.List;
 public class ReportController {
 
 	private final ReportService reportService;
+	private final PersonaRepository personaRepository;
+	private final ClienteRepository clienteRepository;
 
-	public ReportController(ReportService reportService) {
+	public ReportController(ReportService reportService, 
+			PersonaRepository personaRepository,
+			ClienteRepository clienteRepository) {
 		this.reportService = reportService;
+		this.personaRepository = personaRepository;
+		this.clienteRepository = clienteRepository;
 	}
 
 	/**
@@ -57,5 +68,26 @@ public class ReportController {
         headers.setContentLength(pdfBytes.length);
 
         return new ResponseEntity<>(pdfBytes, headers, org.springframework.http.HttpStatus.OK);
+    }
+    
+    /**
+     * Endpoint para buscar el ID de un cliente usando su número de documento.
+     * Vital para el módulo CRM del Frontend.
+     */
+    @GetMapping("/clients/search")
+    public ResponseEntity<?> searchClientByDocument(@RequestParam String documento) {
+        // 1. Buscamos la persona
+        Persona persona = personaRepository.findByNumeroDocumento(documento)
+                .orElseThrow(() -> new RuntimeException("No se encontró ninguna persona con ese documento."));
+
+        // 2. Buscamos el cliente asociado
+        Cliente cliente = clienteRepository.findByIdPersona(persona.getIdPersona())
+                .orElseThrow(() -> new RuntimeException("La persona existe pero no está registrada como cliente."));
+
+        // 3. Devolvemos el ID y el nombre para el CRM
+        return ResponseEntity.ok(Map.of(
+                "idCliente", cliente.getIdCliente(),
+                "nombreCompleto", persona.getNombres() + " " + persona.getApellidos()
+        ));
     }
 }

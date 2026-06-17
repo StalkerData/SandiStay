@@ -1,36 +1,42 @@
 import { error } from '@sveltejs/kit';
 import type { PageServerLoad } from './$types';
 
-export const load: PageServerLoad = async ({ params, fetch }) => {
-    // Extraemos el ID de la URL (ej: /checkout/1 -> id = 1)
+export const load: PageServerLoad = async ({ params, fetch, url }) => {
     const itemId = params.id;
+    
+    // 1. Leemos el tipo de reserva desde la URL (?type=Area o ?type=Habitacion)
+    const tipoReserva = url.searchParams.get('type') || 'Habitacion';
 
     try {
-        // Hacemos la petición a Spring Boot para traer los datos de la habitación
-        const response = await fetch(`http://localhost:8082/api/v1/catalog/rooms/${itemId}`);
+        let item = null;
 
-        if (!response.ok) {
-            error(404, {
-                message: 'La habitación que intentas reservar no está disponible.'
-            });
+        if (tipoReserva === 'Habitacion') {
+            // 2A. Si es Habitación, llamamos al endpoint por ID que hicimos en Java
+            const response = await fetch(`http://localhost:8082/api/v1/catalog/rooms/${itemId}`);
+            if (!response.ok) throw new Error('Habitación no encontrada');
+            item = await response.json();
+            
+        } else {
+            // 2B. Si es Área, llamamos al catálogo de áreas.
+            // (Como en Java no hicimos el endpoint GET /areas/{id}, usamos el truco 
+            // de traer todas y filtrar en memoria, igual que en la página de detalles).
+            const response = await fetch(`http://localhost:8082/api/v1/catalog/areas`);
+            if (!response.ok) throw new Error('Áreas no encontradas');
+            
+            const areas = await response.json();
+            item = areas.find((a: any) => a.id.toString() === itemId);
+            
+            if (!item) throw new Error('Área no encontrada');
         }
 
-        // Convertimos el JSON y lo retornamos a la página
-        const room = await response.json();
-        
-        return {
-            room
+        // 3. Retornamos el ítem. 
+        // Lo llamamos 'room' en el JSON de retorno para no tener que modificar 
+        return { 
+            room: item 
         };
 
     } catch (err) {
         console.error('Error al cargar datos para el checkout:', err);
-        
-        if (err && typeof err === 'object' && 'status' in err) {
-            throw err;
-        }
-        
-        error(500, {
-            message: 'Error de conexión con el servidor.'
-        });
+        error(404, 'El ítem que intentas reservar no está disponible.');
     }
 };
