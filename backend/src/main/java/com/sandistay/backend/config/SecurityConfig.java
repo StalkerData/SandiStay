@@ -26,7 +26,7 @@ public class SecurityConfig {
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
 
     @Value("${cors.allowed-origin}")
-    private String allowedOrigin; // <-- Inyección del valor aquí
+    private String allowedOrigin; 
 
     public SecurityConfig(JwtAuthenticationFilter jwtAuthenticationFilter) {
         this.jwtAuthenticationFilter = jwtAuthenticationFilter;

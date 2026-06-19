@@ -12,8 +12,6 @@ RUN pnpm install --frozen-lockfile
 
 COPY . .
 
-# SOLUCIÓN AL ERROR: Inyectamos la variable estática para que el build no falle.
-# Al ser estática, SvelteKit "quemará" este valor en el código compilado.
 ENV PUBLIC_API_URL=http://localhost/api/v1
 
 RUN pnpm run build

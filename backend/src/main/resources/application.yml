@@ -2,7 +2,6 @@ spring:
   application:
     name: sandistay-backend
   
-  # Por defecto, si no le decimos nada, arranca en modo Desarrollo
   profiles:
     active: dev
 
