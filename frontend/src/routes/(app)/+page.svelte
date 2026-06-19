@@ -2,8 +2,9 @@
     import Button from '$lib/components/ui/Button.svelte';
     import Input from '$lib/components/ui/Input.svelte';
     import Card from '$lib/components/ui/Card.svelte';
-    import { goto } from '$app/navigation'; // Asegúrate de tener esta importación arriba
+    import { goto } from '$app/navigation'; 
     import type { PageData } from './$types';
+    import { PUBLIC_API_URL } from '$env/static/public';
 
     // 1. Recibimos los datos inyectados por +page.server.ts (SSR)
     let { data }: { data: PageData } = $props();
@@ -114,7 +115,7 @@
                     <!-- Snippet del Encabezado (Imagen) -->
                     {#snippet header()}
                         <img 
-                            src={`http://localhost:8082/api/v1${room.imagenPrincipal}`} 
+                            src={`${PUBLIC_API_URL}${room.imagenPrincipal}`} 
                             alt={room.nombre} 
                             class="w-full h-56 object-cover"
                             onerror={(e) => e.currentTarget.src = 'https://via.placeholder.com/800x600?text=Sin+Imagen'}

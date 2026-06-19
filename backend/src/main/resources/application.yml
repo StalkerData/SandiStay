@@ -1,36 +1,31 @@
 spring:
   application:
     name: sandistay-backend
+  
+  # Por defecto, si no le decimos nada, arranca en modo Desarrollo
+  profiles:
+    active: dev
 
-  # Configuración de conexión a PostgreSQL (Docker Local)
   datasource:
-    url: jdbc:postgresql://localhost:5432/sandistay_db
-    username: sandi_admin
-    password: sandi_password123
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/sandistay_db}
+    username: ${DB_USER:sandi_admin}
+    password: ${DB_PASSWORD:sandi_password123}
     driver-class-name: org.postgresql.Driver
 
-  jpa:
-    hibernate:
-      ddl-auto: validate
-    show-sql: true
-    properties:
-      hibernate:
-        format_sql: true
-        highlight_sql: true
-
-# Configuración del servidor web
 server:
   port: 8082
   servlet:
     context-path: /api/v1
 
-# Configuración de Seguridad y JWT
+
 security:
   jwt:
     secret-key: ${JWT_SECRET:U2FuZGlTdGF5U2VjcmV0S2V5UGFyYUZpcm1hRGVUb2tlbnMyMDI2IQ==}
     expiration-time: 86400000
 
-# Integraciones Externas (APIs)
 integration:
   payment:
     url: ${PAYMENT_MOCK_URL:http://localhost:8000/api/v1/bank/statement/verify}
+
+cors:
+  allowed-origin: ${FRONTEND_URL:http://localhost:5173}

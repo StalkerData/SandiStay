@@ -1,12 +1,13 @@
 import { error } from '@sveltejs/kit';
 import type { PageServerLoad } from './$types';
+import { PUBLIC_API_URL } from '$env/static/public';
 
 export const load: PageServerLoad = async ({ params, fetch }) => {
     const areaId = params.id;
     try {
         // TODO: En el backend no hicimos el GET /catalog/areas/{id}. 
         // Por ahora, traemos todas y filtramos en memoria (Deuda técnica menor).
-        const response = await fetch(`http://localhost:8082/api/v1/catalog/areas`);
+        const response = await fetch(`${PUBLIC_API_URL}/catalog/areas`);
         if (!response.ok) throw new Error('No encontrado');
         
         const areas = await response.json();

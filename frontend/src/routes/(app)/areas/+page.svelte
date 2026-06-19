@@ -2,6 +2,7 @@
     import Card from '$lib/components/ui/Card.svelte';
     import Button from '$lib/components/ui/Button.svelte';
     import type { PageData } from './$types';
+    import { PUBLIC_API_URL } from '$env/static/public';
 
     let { data }: { data: PageData } = $props();
     let areas = $derived(data.areas);
@@ -20,7 +21,7 @@
             <Card>
                 {#snippet header()}
                     <img 
-                        src={`http://localhost:8082/api/v1${area.imagenPrincipal}`} 
+                        src={`${PUBLIC_API_URL}${area.imagenPrincipal}`} 
                         alt={area.nombre} 
                         class="w-full h-56 object-cover"
                         onerror={(e) => e.currentTarget.src = 'https://via.placeholder.com/800x600?text=Sin+Imagen'}

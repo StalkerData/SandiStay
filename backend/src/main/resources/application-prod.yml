@@ -1,0 +1,28 @@
+# ==========================================
+# PERFIL DE PRODUCCIÓN (application-prod.yml)
+# ==========================================
+
+spring:
+  jpa:
+    hibernate:
+      # La BD ya debe estar creada.
+      ddl-auto: none
+    # Apagamos los logs de SQL para que el servidor no se ponga lento
+    show-sql: false
+
+# ==========================================
+# SEGURIDAD (Hardening)
+# ==========================================
+springdoc:
+  api-docs:
+    enabled: false # Apaga el JSON de OpenAPI
+  swagger-ui:
+    enabled: false # Apaga la interfaz gráfica de Swagger
+
+# ==========================================
+# LOGS
+# ==========================================
+logging:
+  level:
+    root: INFO
+    com.sandistay.backend: INFO # Solo mostramos INFO y ERROR, nada de DEBUG

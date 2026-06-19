@@ -1,0 +1,95 @@
+# ==========================================
+# Entorno de PRODUCCIÓN - SandiStay
+# ==========================================
+name: sandistay-prod
+
+services:
+  # 1. Base de Datos (Aislada)
+  db:
+    image: postgres:17-alpine
+    container_name: prod_db
+    restart: always
+    environment:
+      POSTGRES_USER: sandi_admin
+      POSTGRES_PASSWORD: sandi_password123
+      POSTGRES_DB: sandistay_db
+      TZ: America/Bogota
+    volumes:
+      - ./volumes/pg_data:/var/lib/postgresql/data
+      - ./SQL_Files:/docker-entrypoint-initdb.d/
+    networks:
+      - sandistay-prod-net
+
+  # 2. Mock de Pagos (Aislado)
+  payment_mock:
+    build: 
+      context: ./payment_mock
+      dockerfile: Dockerfile
+    container_name: prod_payment_mock
+    restart: always
+    networks:
+      - sandistay-prod-net
+
+  # 3. Backend Java (Aislado)
+  backend:
+    build: 
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: prod_backend
+    restart: always
+ 
+    environment:
+      - SPRING_PROFILES_ACTIVE=prod
+      - DB_URL=jdbc:postgresql://db:5432/sandistay_db
+      - DB_USER=sandi_admin
+      - DB_PASSWORD=sandi_password123
+      - PAYMENT_MOCK_URL=http://payment_mock:8000/api/v1/bank/statement/verify
+      - JWT_SECRET=U2FuZGlTdGF5U2VjcmV0S2V5UGFyYUZpcm1hRGVUb2tlbnMyMDI2IQ==
+      - FRONTEND_URL=http://localhost
+    volumes:
+      - ./uploads:/app/uploads
+    depends_on:
+      - db
+      - payment_mock
+    networks:
+      - sandistay-prod-net
+
+  # 4. Frontend SvelteKit (Aislado)
+  frontend:
+    build: 
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: prod_frontend
+    restart: always
+    environment:
+      # La URL pública a la que el navegador del cliente hará las peticiones
+      - PUBLIC_API_URL=http://localhost/api/v1
+      - INTERNAL_API_HOST=http://backend:8082
+      - BODY_SIZE_LIMIT=20M
+    # TRUCO SENIOR: Permite que el SSR de Node.js resuelva 'localhost' hacia Nginx
+    extra_hosts:
+      - "localhost:host-gateway"
+    depends_on:
+      - backend
+    networks:
+      - sandistay-prod-net
+
+  # 5. API Gateway Nginx (El único expuesto a Internet)
+  gateway:
+    image: nginx:alpine
+    container_name: prod_gateway
+    restart: always
+    ports:
+      - "80:80" # Expone el puerto 80 al mundo exterior
+    volumes:
+      # Inyectamos nuestra configuración de enrutamiento
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      - frontend
+      - backend
+    networks:
+      - sandistay-prod-net
+
+networks:
+  sandistay-prod-net:
+    driver: bridge

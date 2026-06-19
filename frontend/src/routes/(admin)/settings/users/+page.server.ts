@@ -1,11 +1,12 @@
 import { error, fail } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from './$types';
+import { PUBLIC_API_URL } from '$env/static/public';
 
 export const load: PageServerLoad = async ({ fetch, locals }) => {
     if (locals.userRole !== 'ADMIN') error(403, 'Acceso denegado.');
 
     try {
-        const response = await fetch('http://localhost:8082/api/v1/users', {
+        const response = await fetch(`${PUBLIC_API_URL}/users`, {
             headers: { 'Authorization': `Bearer ${locals.token}` }
         });
         if (!response.ok) throw new Error('Error al cargar usuarios');
@@ -35,7 +36,7 @@ export const actions: Actions = {
         };
 
         try {
-            const response = await fetch('http://localhost:8082/api/v1/users', {
+            const response = await fetch(`${PUBLIC_API_URL}/users`, {
                 method: 'POST',
                 headers: { 'Authorization': `Bearer ${locals.token}`, 'Content-Type': 'application/json' },
                 body: JSON.stringify(payload)
@@ -57,7 +58,7 @@ export const actions: Actions = {
         const data = await request.formData();
         const id = data.get('id');
 
-        const response = await fetch(`http://localhost:8082/api/v1/users/${id}`, {
+        const response = await fetch(`${PUBLIC_API_URL}/users/${id}`, {
             method: 'DELETE',
             headers: { 'Authorization': `Bearer ${locals.token}` }
         });

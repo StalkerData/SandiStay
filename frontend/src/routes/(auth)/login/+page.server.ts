@@ -1,5 +1,6 @@
 import { fail, redirect } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from './$types';
+import { PUBLIC_API_URL } from '$env/static/public';
 
 // 1. Si el usuario ya está logueado, no debería ver la pantalla de login
 export const load: PageServerLoad = async ({ cookies }) => {
@@ -28,7 +29,7 @@ export const actions: Actions = {
 
         try {
             // B. Hacemos la petición a nuestro Backend en Spring Boot
-            const response = await fetch('http://localhost:8082/api/v1/auth/login', {
+            const response = await fetch(`${PUBLIC_API_URL}/auth/login`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'

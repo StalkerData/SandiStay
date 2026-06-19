@@ -1,6 +1,7 @@
 import { error } from '@sveltejs/kit';
 import type { PageServerLoad } from './$types';
-import type { Room } from '../../+page.server'; // Reutilizamos la interfaz que creamos antes
+import type { Room } from '../../+page.server';
+import { PUBLIC_API_URL } from '$env/static/public';
 
 export const load: PageServerLoad = async ({ params, fetch }) => {
     // 1. Extraemos el ID de la URL (ej: si la URL es /rooms/1, params.id será "1")
@@ -8,7 +9,7 @@ export const load: PageServerLoad = async ({ params, fetch }) => {
 
     try {
         // 2. Hacemos la petición a Spring Boot pidiendo esa habitación específica
-        const response = await fetch(`http://localhost:8082/api/v1/catalog/rooms/${roomId}`);
+        const response = await fetch(`${PUBLIC_API_URL}/catalog/rooms/${roomId}`);
 
         // 3. Manejo de errores HTTP
         if (!response.ok) {

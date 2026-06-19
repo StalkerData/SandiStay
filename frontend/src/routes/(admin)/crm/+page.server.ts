@@ -1,5 +1,6 @@
 import { fail } from '@sveltejs/kit';
 import type { Actions } from './$types';
+import { PUBLIC_API_URL } from '$env/static/public';
 
 export const actions: Actions = {
     searchClient: async ({ request, locals, fetch }) => {
@@ -10,7 +11,7 @@ export const actions: Actions = {
 
         try {
             // 1. Buscamos el ID del cliente por su documento
-            const resSearch = await fetch(`http://localhost:8082/api/v1/reports/clients/search?documento=${documento}`, {
+            const resSearch = await fetch(`${PUBLIC_API_URL}/reports/clients/search?documento=${documento}`, {
                 headers: { 'Authorization': `Bearer ${locals.token}` }
             });
 
@@ -21,7 +22,7 @@ export const actions: Actions = {
             const clientData = await resSearch.json();
 
             // 2. Con el ID, buscamos su historial CRM
-            const resHistory = await fetch(`http://localhost:8082/api/v1/reports/clients/${clientData.idCliente}/history`, {
+            const resHistory = await fetch(`${PUBLIC_API_URL}/reports/clients/${clientData.idCliente}/history`, {
                 headers: { 'Authorization': `Bearer ${locals.token}` }
             });
 

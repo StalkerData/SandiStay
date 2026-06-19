@@ -1,5 +1,6 @@
 import { error, fail } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from './$types';
+import { PUBLIC_API_URL } from '$env/static/public';
 
 export const load: PageServerLoad = async ({ params, fetch, locals }) => {
     const idReserva = params.id;
@@ -9,7 +10,7 @@ export const load: PageServerLoad = async ({ params, fetch, locals }) => {
 
     try {
         // 1. Traer el detalle completo de la reserva
-        const resDetalle = await fetch(`http://localhost:8082/api/v1/bookings/${idReserva}`, {
+        const resDetalle = await fetch(`${PUBLIC_API_URL}/bookings/${idReserva}`, {
             headers: { 'Authorization': `Bearer ${token}` }
         });
 
@@ -17,7 +18,7 @@ export const load: PageServerLoad = async ({ params, fetch, locals }) => {
         const detalle = await resDetalle.json();
 
         // 2. Traer el balance financiero
-        const resBalance = await fetch(`http://localhost:8082/api/v1/finance/balance/${idReserva}`, {
+        const resBalance = await fetch(`${PUBLIC_API_URL}/finance/balance/${idReserva}`, {
             headers: { 'Authorization': `Bearer ${token}` }
         });
 
@@ -29,7 +30,7 @@ export const load: PageServerLoad = async ({ params, fetch, locals }) => {
         // 3. Traer el historial del cliente REAL
         const idCliente = detalle.idCliente; // <--- AHORA USAMOS EL ID REAL
         
-        const resHistory = await fetch(`http://localhost:8082/api/v1/reports/clients/${idCliente}/history`, {
+        const resHistory = await fetch(`${PUBLIC_API_URL}/reports/clients/${idCliente}/history`, {
             headers: { 'Authorization': `Bearer ${token}` }
         });
 
@@ -58,7 +59,7 @@ export const actions: Actions = {
         const idReserva = params.id;
 
         try {
-            const response = await fetch(`http://localhost:8082/api/v1/bookings/${idReserva}/pay`, {
+            const response = await fetch(`${PUBLIC_API_URL}/bookings/${idReserva}/pay`, {
                 method: 'POST',
                 headers: {
                     'Authorization': `Bearer ${locals.token}`,

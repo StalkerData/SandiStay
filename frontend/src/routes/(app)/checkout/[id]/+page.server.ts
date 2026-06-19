@@ -1,5 +1,6 @@
 import { error } from '@sveltejs/kit';
 import type { PageServerLoad } from './$types';
+import { PUBLIC_API_URL } from '$env/static/public';
 
 export const load: PageServerLoad = async ({ params, fetch, url }) => {
     const itemId = params.id;
@@ -12,7 +13,7 @@ export const load: PageServerLoad = async ({ params, fetch, url }) => {
 
         if (tipoReserva === 'Habitacion') {
             // 2A. Si es Habitación, llamamos al endpoint por ID que hicimos en Java
-            const response = await fetch(`http://localhost:8082/api/v1/catalog/rooms/${itemId}`);
+            const response = await fetch(`${PUBLIC_API_URL}/catalog/rooms/${itemId}`);
             if (!response.ok) throw new Error('Habitación no encontrada');
             item = await response.json();
             
@@ -20,7 +21,7 @@ export const load: PageServerLoad = async ({ params, fetch, url }) => {
             // 2B. Si es Área, llamamos al catálogo de áreas.
             // (Como en Java no hicimos el endpoint GET /areas/{id}, usamos el truco 
             // de traer todas y filtrar en memoria, igual que en la página de detalles).
-            const response = await fetch(`http://localhost:8082/api/v1/catalog/areas`);
+            const response = await fetch(`${PUBLIC_API_URL}/catalog/areas`);
             if (!response.ok) throw new Error('Áreas no encontradas');
             
             const areas = await response.json();

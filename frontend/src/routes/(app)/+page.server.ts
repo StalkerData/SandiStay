@@ -1,4 +1,5 @@
 import type { PageServerLoad } from './$types';
+import { PUBLIC_API_URL } from '$env/static/public';
 
 // Definimos la interfaz (molde) de lo que esperamos recibir de Spring Boot.
 // Esto debe coincidir exactamente con el DTO 'CatalogRoomResponse' de Java.
@@ -20,7 +21,7 @@ export const load: PageServerLoad = async ({ fetch }) => {
     try {
         // 1. Hacemos la petición HTTP a nuestro Backend en Spring Boot
         // Usamos el fetch especial de SvelteKit que está optimizado para SSR
-        const response = await fetch('http://localhost:8082/api/v1/catalog/rooms');
+        const response = await fetch(`${PUBLIC_API_URL}/catalog/rooms`);
 
         // 2. Verificamos si la respuesta fue exitosa (Código 200-299)
         if (!response.ok) {

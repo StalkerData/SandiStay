@@ -1,5 +1,6 @@
 import { error } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
+import { PUBLIC_API_URL } from '$env/static/public';
 
 /**
  * Endpoint Proxy (BFF) para descargar el PDF.
@@ -13,7 +14,7 @@ export const GET: RequestHandler = async ({ params, locals, fetch }) => {
 
     try {
         // Hacemos el POST a Spring Boot
-        const response = await fetch('http://localhost:8082/api/v1/finance/invoices/generate', {
+        const response = await fetch(`${PUBLIC_API_URL}/finance/invoices/generate`, {
             method: 'POST',
             headers: {
                 'Authorization': `Bearer ${token}`,

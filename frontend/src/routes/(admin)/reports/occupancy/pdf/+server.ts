@@ -1,5 +1,6 @@
 import { error } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
+import { PUBLIC_API_URL } from '$env/static/public';
 
 export const GET: RequestHandler = async ({ url, locals, fetch }) => {
     const token = locals.token;
@@ -11,7 +12,7 @@ export const GET: RequestHandler = async ({ url, locals, fetch }) => {
     if (!start || !end) error(400, 'Faltan fechas');
 
     try {
-        const response = await fetch(`http://localhost:8082/api/v1/reports/occupancy/pdf?start=${start}&end=${end}`, {
+        const response = await fetch(`${PUBLIC_API_URL}/reports/occupancy/pdf?start=${start}&end=${end}`, {
             method: 'GET',
             headers: { 'Authorization': `Bearer ${token}` }
         });

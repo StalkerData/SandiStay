@@ -1,5 +1,6 @@
 import { error, fail, redirect } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from './$types';
+import { PUBLIC_API_URL } from '$env/static/public';
 
 // Agregamos idReserva a la interfaz
 export interface ReservaResumen {
@@ -18,7 +19,7 @@ export const load: PageServerLoad = async ({ fetch, locals }) => {
     if (!token) error(401, 'No autorizado');
 
     try {
-        const response = await fetch('http://localhost:8082/api/v1/bookings', {
+        const response = await fetch(`${PUBLIC_API_URL}/bookings`, {
             method: 'GET',
             headers: {
                 'Authorization': `Bearer ${token}`,
@@ -55,7 +56,7 @@ export const actions: Actions = {
         const data = await request.formData();
         const id = data.get('id');
 
-        const response = await fetch(`http://localhost:8082/api/v1/bookings/${id}/checkout`, {
+        const response = await fetch(`${PUBLIC_API_URL}/bookings/${id}/checkout`, {
             method: 'POST',
             headers: { 'Authorization': `Bearer ${locals.token}` }
         });
@@ -78,7 +79,7 @@ export const actions: Actions = {
             return fail(400, { error: 'El motivo de cancelación es obligatorio.' });
         }
 
-        const response = await fetch(`http://localhost:8082/api/v1/bookings/${id}/cancel`, {
+        const response = await fetch(`${PUBLIC_API_URL}/bookings/${id}/cancel`, {
             method: 'PATCH',
             headers: {
                 'Authorization': `Bearer ${locals.token}`,

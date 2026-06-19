@@ -1,0 +1,19 @@
+# ==========================================
+# PERFIL DE DESARROLLO (application-dev.yml)
+# ==========================================
+
+spring:
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
+        highlight_sql: true
+
+springdoc:
+  api-docs:
+    enabled: true
+  swagger-ui:
+    enabled: true

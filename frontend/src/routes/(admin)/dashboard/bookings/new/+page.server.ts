@@ -1,5 +1,6 @@
 import { error } from '@sveltejs/kit';
 import type { PageServerLoad } from './$types';
+import { PUBLIC_API_URL } from '$env/static/public';
 
 export const load: PageServerLoad = async ({ fetch, locals }) => {
     const token = locals.token;
@@ -7,8 +8,8 @@ export const load: PageServerLoad = async ({ fetch, locals }) => {
 
     try {
         const [resRooms, resAreas] = await Promise.all([
-            fetch('http://localhost:8082/api/v1/catalog/admin/rooms', { headers: { 'Authorization': `Bearer ${token}` } }),
-            fetch('http://localhost:8082/api/v1/catalog/admin/areas', { headers: { 'Authorization': `Bearer ${token}` } })
+            fetch(`${PUBLIC_API_URL}/catalog/admin/rooms`, { headers: { 'Authorization': `Bearer ${token}` } }),
+            fetch(`${PUBLIC_API_URL}/catalog/admin/areas`, { headers: { 'Authorization': `Bearer ${token}` } })
         ]);
 
         if (!resRooms.ok || !resAreas.ok) throw new Error('Error al cargar el catálogo');

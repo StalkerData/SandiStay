@@ -1,5 +1,6 @@
 import { error, fail } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from './$types';
+import { PUBLIC_API_URL } from '$env/static/public';
 
 export const load: PageServerLoad = async ({ fetch, locals }) => {
     // 1. BARRERA DE SEGURIDAD: Solo el ADMIN puede entrar a Tesorería
@@ -10,10 +11,10 @@ export const load: PageServerLoad = async ({ fetch, locals }) => {
     try {
         // 2. Traemos las Cuentas por Cobrar y los Reembolsos Pendientes en paralelo
         const [resReceivables, resRefunds] = await Promise.all([
-            fetch('http://localhost:8082/api/v1/finance/treasury/receivables', {
+            fetch(`${PUBLIC_API_URL}/finance/treasury/receivables`, {
                 headers: { 'Authorization': `Bearer ${locals.token}` }
             }),
-            fetch('http://localhost:8082/api/v1/finance/treasury/refunds', {
+            fetch(`${PUBLIC_API_URL}/finance/treasury/refunds`, {
                 headers: { 'Authorization': `Bearer ${locals.token}` }
             })
         ]);
@@ -49,7 +50,7 @@ export const actions: Actions = {
         };
 
         try {
-            const response = await fetch('http://localhost:8082/api/v1/finance/treasury/payments', {
+            const response = await fetch(`${PUBLIC_API_URL}/finance/treasury/payments`, {
                 method: 'POST',
                 headers: {
                     'Authorization': `Bearer ${locals.token}`,
@@ -77,7 +78,7 @@ export const actions: Actions = {
         const idPago = data.get('idPago');
 
         try {
-            const response = await fetch(`http://localhost:8082/api/v1/finance/treasury/refunds/${idPago}/process`, {
+            const response = await fetch(`${PUBLIC_API_URL}/finance/treasury/refunds/${idPago}/process`, {
                 method: 'PATCH',
                 headers: { 'Authorization': `Bearer ${locals.token}` }
             });

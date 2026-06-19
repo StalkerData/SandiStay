@@ -15,6 +15,7 @@ import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
+import org.springframework.beans.factory.annotation.Value;
 import java.util.List;
 
 @Configuration
@@ -22,59 +23,54 @@ import java.util.List;
 @EnableMethodSecurity
 public class SecurityConfig {
 
-	private final JwtAuthenticationFilter jwtAuthenticationFilter;
+    private final JwtAuthenticationFilter jwtAuthenticationFilter;
 
-	// Inyectamos el filtro que acabas de perfeccionar
-	public SecurityConfig(JwtAuthenticationFilter jwtAuthenticationFilter) {
-		this.jwtAuthenticationFilter = jwtAuthenticationFilter;
-	}
+    @Value("${cors.allowed-origin}")
+    private String allowedOrigin; // <-- Inyección del valor aquí
 
-	@Bean
-	SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
-		http.cors(cors -> cors.configurationSource(corsConfigurationSource())).csrf(csrf -> csrf.disable())
-				.sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-				.authorizeHttpRequests(auth -> auth.requestMatchers("/auth/login").permitAll()
-						.requestMatchers("/catalog/**").permitAll().requestMatchers("/uploads/**").permitAll()
-						.requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
+    public SecurityConfig(JwtAuthenticationFilter jwtAuthenticationFilter) {
+        this.jwtAuthenticationFilter = jwtAuthenticationFilter;
+    }
 
-						// NUEVA LÍNEA: Permitir que cualquiera cree una reserva (Guest Checkout)
-						.requestMatchers(org.springframework.http.HttpMethod.POST, "/bookings").permitAll()
+    @Bean
+    SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+        http
+            .cors(cors -> cors.configurationSource(corsConfigurationSource()))
+            .csrf(csrf -> csrf.disable())
+            .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+            .authorizeHttpRequests(auth -> auth
+                .requestMatchers("/auth/login").permitAll()
+                .requestMatchers("/catalog/**").permitAll()
+                .requestMatchers("/uploads/**").permitAll()
+                .requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
+                .requestMatchers(org.springframework.http.HttpMethod.POST, "/bookings").permitAll()
+                .anyRequest().authenticated()
+            )
+            .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
 
-						// Todo lo demás (como cancelar o ver reportes) requiere token
-						.anyRequest().authenticated())
-				// AQUÍ ESTÁ LA MAGIA: Ponemos tu filtro ANTES del filtro estándar de Spring
-				.addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
+        return http.build();
+    }
 
-		return http.build();
-	}
+    @Bean
+    PasswordEncoder passwordEncoder() {
+        return new BCryptPasswordEncoder();
+    }
 
-	/**
-	 * Bean para encriptar y verificar contraseñas usando BCrypt. Spring Security lo
-	 * usará automáticamente al hacer el login.
-	 */
-	@Bean
-	PasswordEncoder passwordEncoder() {
-		return new BCryptPasswordEncoder();
-	}
+    @Bean
+    AuthenticationManager authenticationManager(AuthenticationConfiguration config) throws Exception {
+        return config.getAuthenticationManager();
+    }
 
-	/**
-	 * Bean del AuthenticationManager que inyectamos en AuthService.
-	 */
-	@Bean
-	AuthenticationManager authenticationManager(AuthenticationConfiguration config) throws Exception {
-		return config.getAuthenticationManager();
-	}
+    @Bean
+    public CorsConfigurationSource corsConfigurationSource() { // <-- Sin parámetros
+        CorsConfiguration configuration = new CorsConfiguration();
+        configuration.setAllowedOrigins(List.of(allowedOrigin)); // <-- Usa el campo inyectado
+        configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
+        configuration.setAllowedHeaders(List.of("Authorization", "Content-Type"));
+        configuration.setAllowCredentials(true);
 
-	@Bean
-	CorsConfigurationSource corsConfigurationSource() {
-		CorsConfiguration configuration = new CorsConfiguration();
-		configuration.setAllowedOrigins(List.of("http://localhost:5173"));
-		configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
-		configuration.setAllowedHeaders(List.of("Authorization", "Content-Type"));
-		configuration.setAllowCredentials(true);
-
-		UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
-		source.registerCorsConfiguration("/**", configuration);
-		return source;
-	}
+        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+        source.registerCorsConfiguration("/**", configuration);
+        return source;
+    }
 }

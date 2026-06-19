@@ -1,5 +1,6 @@
 import { error, fail } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from './$types';
+import { PUBLIC_API_URL } from '$env/static/public';
 
 export const load: PageServerLoad = async ({ fetch, locals }) => {
     const token = locals.token;
@@ -10,8 +11,8 @@ export const load: PageServerLoad = async ({ fetch, locals }) => {
     try {
         // AHORA USAMOS LOS ENDPOINTS DE ADMIN PARA VER TODO EL INVENTARIO
         const [resRooms, resAreas] = await Promise.all([
-            fetch('http://localhost:8082/api/v1/catalog/admin/rooms', { headers: { 'Authorization': `Bearer ${token}` } }),
-            fetch('http://localhost:8082/api/v1/catalog/admin/areas', { headers: { 'Authorization': `Bearer ${token}` } })
+            fetch(`${PUBLIC_API_URL}/catalog/admin/rooms`, { headers: { 'Authorization': `Bearer ${token}` } }),
+            fetch(`${PUBLIC_API_URL}/catalog/admin/areas`, { headers: { 'Authorization': `Bearer ${token}` } })
         ]);
 
         if (!resRooms.ok || !resAreas.ok) throw new Error('Error al cargar el catálogo');
@@ -35,8 +36,8 @@ export const actions: Actions = {
         const idEstado = data.get('idEstado');
 
         const endpoint = tipo === 'room' 
-            ? `http://localhost:8082/api/v1/catalog/rooms/${id}/status?idEstadoLugar=${idEstado}`
-            : `http://localhost:8082/api/v1/catalog/areas/${id}/status?idEstadoLugar=${idEstado}`;
+            ? `${PUBLIC_API_URL}/catalog/rooms/${id}/status?idEstadoLugar=${idEstado}`
+            : `${PUBLIC_API_URL}/catalog/areas/${id}/status?idEstadoLugar=${idEstado}`;
 
         const response = await fetch(endpoint, {
             method: 'PATCH',
@@ -54,8 +55,8 @@ export const actions: Actions = {
         const tipo = data.get('tipo');
 
         const endpoint = tipo === 'room' 
-            ? `http://localhost:8082/api/v1/catalog/rooms/${id}`
-            : `http://localhost:8082/api/v1/catalog/areas/${id}`;
+            ? `${PUBLIC_API_URL}/catalog/rooms/${id}`
+            : `${PUBLIC_API_URL}/catalog/areas/${id}`;
 
         const response = await fetch(endpoint, {
             method: 'DELETE',
@@ -85,7 +86,7 @@ export const actions: Actions = {
         };
 
         const method = id ? 'PUT' : 'POST';
-        const url = id ? `http://localhost:8082/api/v1/catalog/rooms/${id}` : `http://localhost:8082/api/v1/catalog/rooms`;
+        const url = id ? `${PUBLIC_API_URL}/catalog/rooms/${id}` : `${PUBLIC_API_URL}/catalog/rooms`;
 
         const response = await fetch(url, {
             method: method,
@@ -113,7 +114,7 @@ export const actions: Actions = {
         };
 
         const method = id ? 'PUT' : 'POST';
-        const url = id ? `http://localhost:8082/api/v1/catalog/areas/${id}` : `http://localhost:8082/api/v1/catalog/areas`;
+        const url = id ? `${PUBLIC_API_URL}/catalog/areas/${id}` : `${PUBLIC_API_URL}/catalog/areas`;
 
         const response = await fetch(url, {
             method: method,
@@ -138,8 +139,8 @@ export const actions: Actions = {
         formData.append('file', file);
 
         const url = tipo === 'room' 
-            ? `http://localhost:8082/api/v1/catalog/rooms/${id}/images`
-            : `http://localhost:8082/api/v1/catalog/areas/${id}/images`;
+            ? `${PUBLIC_API_URL}/catalog/rooms/${id}/images`
+            : `${PUBLIC_API_URL}/catalog/areas/${id}/images`;
 
         const response = await fetch(url, {
             method: 'POST',
@@ -159,8 +160,8 @@ export const actions: Actions = {
         const tipo = data.get('tipo');
 
         const url = tipo === 'room' 
-            ? `http://localhost:8082/api/v1/catalog/rooms/images/${idImagen}`
-            : `http://localhost:8082/api/v1/catalog/areas/images/${idImagen}`;
+            ? `${PUBLIC_API_URL}/catalog/rooms/images/${idImagen}`
+            : `${PUBLIC_API_URL}/catalog/areas/images/${idImagen}`;
 
         const response = await fetch(url, {
             method: 'DELETE',

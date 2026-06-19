@@ -1,5 +1,6 @@
 import { fail } from '@sveltejs/kit';
 import type { Actions } from './$types';
+import { PUBLIC_API_URL } from '$env/static/public';
 
 export const actions: Actions = {
     changePassword: async ({ request, locals, fetch }) => {
@@ -13,7 +14,7 @@ export const actions: Actions = {
         }
 
         try {
-            const response = await fetch('http://localhost:8082/api/v1/users/me/password', {
+            const response = await fetch(`${PUBLIC_API_URL}/users/me/password`, {
                 method: 'PATCH',
                 headers: {
                     'Authorization': `Bearer ${locals.token}`,

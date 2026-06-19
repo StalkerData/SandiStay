@@ -1,6 +1,7 @@
 <script lang="ts">
     import Button from '$lib/components/ui/Button.svelte';
     import type { PageData } from './$types';
+    import { PUBLIC_API_URL } from '$env/static/public';
 
     // Recibimos los datos inyectados por el servidor (SSR)
     let { data }: { data: PageData } = $props();
@@ -31,7 +32,7 @@
             <!-- Imagen Principal -->
             <div class="rounded-2xl overflow-hidden shadow-lg h-[400px] md:h-[500px]">
                 <img 
-                    src={`http://localhost:8082/api/v1${room.imagenPrincipal}`} 
+                    src={`${PUBLIC_API_URL}${room.imagenPrincipal}`} 
                     alt={room.nombre} 
                     class="w-full h-full object-cover hover:scale-105 transition-transform duration-700"
                     onerror={(e) => e.currentTarget.src = 'https://images.unsplash.com/photo-1578683010236-d716f9a3f461?q=80&w=1200&auto=format&fit=crop'}

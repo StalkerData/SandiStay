@@ -1,6 +1,7 @@
 <script lang="ts">
     import Button from '$lib/components/ui/Button.svelte';
     import type { PageData } from './$types';
+    import { PUBLIC_API_URL } from '$env/static/public';
 
     let { data }: { data: PageData } = $props();
     let area = $derived(data.area);
@@ -18,7 +19,7 @@
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-12">
         <div class="lg:col-span-2 space-y-8">
             <div class="rounded-2xl overflow-hidden shadow-lg h-[400px] md:h-[500px]">
-                <img src={`http://localhost:8082/api/v1${area.imagenPrincipal}`} alt={area.nombre} class="w-full h-full object-cover" onerror={(e) => e.currentTarget.src = 'https://via.placeholder.com/800x600?text=Sin+Imagen'} />
+                <img src={`${PUBLIC_API_URL}${area.imagenPrincipal}`} alt={area.nombre} class="w-full h-full object-cover" onerror={(e) => e.currentTarget.src = 'https://via.placeholder.com/800x600?text=Sin+Imagen'} />
             </div>
             <div>
                 <div class="flex items-center gap-3 mb-2">

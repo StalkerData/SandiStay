@@ -1,5 +1,6 @@
 import { error } from '@sveltejs/kit';
 import type { PageServerLoad } from './$types';
+import { PUBLIC_API_URL } from '$env/static/public';
 
 export const load: PageServerLoad = async ({ fetch, locals, url }) => {
     const token = locals.token;
@@ -9,7 +10,7 @@ export const load: PageServerLoad = async ({ fetch, locals, url }) => {
     const start = url.searchParams.get('start') || '';
     const end = url.searchParams.get('end') || '';
 
-    let apiUrl = 'http://localhost:8082/api/v1/reports/occupancy';
+    let apiUrl = `${PUBLIC_API_URL}/reports/occupancy`;
     if (start && end) {
         apiUrl += `?start=${start}&end=${end}`;
     }

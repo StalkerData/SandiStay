@@ -3,6 +3,7 @@
     import Button from '$lib/components/ui/Button.svelte';
     import Input from '$lib/components/ui/Input.svelte';
     import type { PageData } from './$types';
+    import { PUBLIC_API_URL } from '$env/static/public';
 
     let { data }: { data: PageData } = $props();
     let rooms = $derived(data.rooms);
@@ -60,7 +61,7 @@
         try {
             // Como estamos en el Dashboard, enviamos el Token de la Secretaria
             // (Aunque el endpoint es público, enviarlo ayuda a la auditoría)
-            const res = await fetch('http://localhost:8082/api/v1/bookings', {
+            const res = await fetch(`${PUBLIC_API_URL}/bookings`, {
                 method: 'POST',
                 headers: { 
                     'Content-Type': 'application/json'

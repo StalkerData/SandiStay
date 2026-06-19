@@ -4,6 +4,7 @@
 	import Button from '$lib/components/ui/Button.svelte';
 	import Input from '$lib/components/ui/Input.svelte';
 	import type { PageData } from './$types';
+    import { PUBLIC_API_URL } from '$env/static/public';
 
 	// 1. Recibimos los datos y usamos $derived para mantener la reactividad en Svelte 5
 	let { data }: { data: PageData } = $props();
@@ -98,7 +99,7 @@
         };
 
 		try {
-			const res = await fetch('http://localhost:8082/api/v1/bookings', {
+			const res = await fetch(`${PUBLIC_API_URL}/bookings`, {
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json' },
 				body: JSON.stringify(payload)
@@ -359,7 +360,7 @@
 
 				<div class="mb-6 flex gap-4 border-b border-neutral/10 pb-6">
 					<img
-						src={`http://localhost:8082/api/v1${item.imagenPrincipal}`}
+						src={`${PUBLIC_API_URL}${item.imagenPrincipal}`}
 						alt="Foto"
 						class="h-20 w-20 rounded-md object-cover"
 						onerror={(e) =>

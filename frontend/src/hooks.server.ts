@@ -1,45 +1,80 @@
-import { redirect, type Handle } from '@sveltejs/kit';
+import { redirect, type Handle, type HandleFetch } from '@sveltejs/kit';
+import { env } from '$env/dynamic/private';
+import { PUBLIC_API_URL } from '$env/static/public';
 
-/**
- * El Guardián de Rutas (Route Guard).
- * Esta función se ejecuta en CADA petición que llega al servidor de SvelteKit.
- */
 export const handle: Handle = async ({ event, resolve }) => {
-    
-    // 1. Extraemos la ruta a la que el usuario intenta acceder
     const path = event.url.pathname;
-
-    // 2. Extraemos el Token JWT de las cookies (si existe)
     const token = event.cookies.get('jwt_token');
+    const isProtectedRoute = path.startsWith('/dashboard') ||
+        path.startsWith('/reports') ||
+        path.startsWith('/settings');
 
-    // 3. Definimos qué rutas están protegidas
-    // En nuestra arquitectura, todo lo que empiece con /dashboard, /reports o /settings es privado
-    const isProtectedRoute = path.startsWith('/dashboard') || 
-                             path.startsWith('/reports') || 
-                             path.startsWith('/settings');
-
-    // 4. LÓGICA DE PROTECCIÓN
-    if (isProtectedRoute) {
-        // Si intenta entrar a una ruta protegida y NO tiene token, lo pateamos al login
-        if (!token) {
-            console.log(`[Guard] Acceso denegado a ${path}. Redirigiendo a /login`);
-            throw redirect(303, '/login');
-        }
-
-        // Opcional: Aquí podríamos decodificar el JWT para verificar si expiró,
-        // pero por rendimiento, dejaremos que Spring Boot lo valide cuando hagamos fetch.
-        // Si Spring Boot devuelve 401, cerraremos la sesión en ese momento.
+    if (isProtectedRoute && !token) {
+        throw redirect(303, '/login');
     }
 
-    // 5. INYECCIÓN DE DATOS GLOBALES (Locals)
-    // Si el usuario tiene token, lo guardamos en 'event.locals' para que cualquier 
-    // +page.server.ts pueda usarlo fácilmente al hacer fetch a Spring Boot.
     if (token) {
         event.locals.token = token;
         event.locals.userRole = event.cookies.get('user_role') || 'UNKNOWN';
     }
 
-    // 6. Dejamos que la petición continúe su camino normal
-    const response = await resolve(event);
-    return response;
+    return await resolve(event);
 };
+export const handleFetch: HandleFetch = async ({ request, fetch }) => {
+    const internalHost = env.INTERNAL_API_HOST;
+
+    if (internalHost && request.url.includes('/api/v1')) {
+        const url = new URL(request.url);
+        const internalUrl = `${internalHost}${url.pathname}${url.search}`;
+
+        const newHeaders = new Headers(request.headers);
+        newHeaders.delete('referer');
+        newHeaders.delete('host');
+        // Fijamos el Origin explícitamente, porque si lo borramos, Node le pone "null" solo.
+        newHeaders.set('origin', new URL(PUBLIC_API_URL).origin);
+
+        if (request.method === 'GET' || request.method === 'HEAD') {
+            return fetch(internalUrl, { method: request.method, headers: newHeaders });
+        }
+
+        return fetch(internalUrl, {
+            method: request.method,
+            headers: newHeaders,
+            body: request.body,
+            duplex: 'half'
+        } as RequestInit);
+    }
+
+    return fetch(request);
+};
+/*
+export const handleFetch: HandleFetch = async ({ request, fetch }) => {
+    const internalHost = env.INTERNAL_API_HOST; // ej: "http://backend:8082" — solo existe en Docker
+
+    // Si NO estamos en Docker (no hay INTERNAL_API_HOST), dejamos pasar la petición tal cual
+    if (internalHost && request.url.includes('/api/v1')) {
+        const url = new URL(request.url);
+        const internalUrl = `${internalHost}${url.pathname}${url.search}`;
+
+        const newHeaders = new Headers(request.headers);
+        newHeaders.delete('origin');
+        newHeaders.delete('referer');
+        newHeaders.delete('host');
+
+        console.log('>>> Enviando a backend:', internalUrl);
+        console.log('>>> Headers finales:', JSON.stringify([...newHeaders.entries()]));
+
+        if (request.method === 'GET' || request.method === 'HEAD') {
+            return fetch(internalUrl, { method: request.method, headers: newHeaders });
+        }
+
+        return fetch(internalUrl, {
+            method: request.method,
+            headers: newHeaders,
+            body: request.body,
+            duplex: 'half'
+        } as RequestInit);
+    }
+
+    return fetch(request);
+};*/
