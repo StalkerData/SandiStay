@@ -62,4 +62,11 @@ public interface ReservaRepository extends JpaRepository<Reserva, Integer> {
      * Útil para encontrar reservas pendientes que ya expiraron su tiempo de pago (24h).
      */
     List<Reserva> findByIdEstadoReservaAndFechaCreacionBefore(Integer idEstadoReserva, LocalDateTime fechaLimite);
+    
+
+
+    // NUEVO: Cuenta cuántas reservas tiene un cliente en un estado específico
+    long countByIdClienteAndIdEstadoReserva(Integer idCliente, Integer idEstadoReserva);
+  
+    
 }

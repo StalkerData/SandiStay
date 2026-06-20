@@ -25,6 +25,7 @@ import java.time.LocalDate;
 import java.time.LocalTime;
 import java.util.List;
 import java.util.stream.Collectors;
+import java.math.BigDecimal;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -310,6 +311,11 @@ public class CatalogService {
             log.error("No se pudo eliminar el archivo físico: {}", e.getMessage());
         }
         imagenAreaRepository.delete(imagen);
+    }
+    
+    public BigDecimal getClientDiscount(String documento) {
+        BigDecimal descuento = catalogRepository.getDescuentoByDocumento(documento);
+        return descuento != null ? descuento : BigDecimal.ZERO;
     }
     
 }

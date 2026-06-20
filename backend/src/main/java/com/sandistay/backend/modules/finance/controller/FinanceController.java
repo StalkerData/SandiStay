@@ -41,21 +41,19 @@ public class FinanceController {
             @Valid @RequestBody GenerateInvoiceRequest request,
             Authentication authentication) {
 
-        // 1. Obtener el ID del usuario (Staff) que genera la factura
         Integer idUsuarioActual = 1;
         if (authentication != null && authentication.isAuthenticated()
                 && !authentication.getName().equals("anonymousUser")) {
-            // TODO: Buscar el ID real en la BD usando authentication.getName()
             idUsuarioActual = 1;
         }
 
-        // 2. Llamar al servicio para ejecutar el SP en Postgres y compilar el PDF
-        byte[] pdfBytes = reportService.generarFacturaPdf(request.idReserva(), idUsuarioActual);
+        // CORRECCIÓN: Ahora usamos request.codigoReserva()
+        byte[] pdfBytes = reportService.generarFacturaPdf(request.codigoReserva(), idUsuarioActual);
 
-        // 3. Construir las cabeceras HTTP correctas
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_PDF);
-        headers.setContentDispositionFormData("inline", "factura-" + request.idReserva() + ".pdf");
+        // CORRECCIÓN: Usamos el código en el nombre del archivo
+        headers.setContentDispositionFormData("inline", "factura-" + request.codigoReserva() + ".pdf");
         headers.setContentLength(pdfBytes.length);
 
         return new ResponseEntity<>(pdfBytes, headers, HttpStatus.CREATED);

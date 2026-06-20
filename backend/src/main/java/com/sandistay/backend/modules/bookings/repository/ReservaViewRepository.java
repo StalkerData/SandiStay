@@ -12,4 +12,7 @@ public interface ReservaViewRepository extends Repository<ReservaView, Integer> 
     List<ReservaView> findAllByOrderByFechaReservaDesc();
 
     Optional<ReservaView> findById(Integer idReserva);
+
+    // NUEVO: Busca todas las reservas de un cliente específico
+    List<ReservaView> findByCodigoClienteOrderByFechaReservaDesc(String codigoCliente);
 }

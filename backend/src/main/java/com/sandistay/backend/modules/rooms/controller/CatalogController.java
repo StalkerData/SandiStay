@@ -18,9 +18,11 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/catalog")
@@ -221,5 +223,14 @@ public class CatalogController {
                 .filter(Area::getActivo)
                 .toList();
         return ResponseEntity.ok(areas);
+    }
+    
+    /**
+     * Endpoint público para consultar si un documento tiene descuentos por fidelidad.
+     */
+    @GetMapping("/discount")
+    public ResponseEntity<Map<String, BigDecimal>> getDiscount(@RequestParam String documento) {
+        BigDecimal descuento = catalogService.getClientDiscount(documento);
+        return ResponseEntity.ok(Map.of("descuento", descuento));
     }
 }

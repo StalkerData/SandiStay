@@ -22,6 +22,9 @@ public class ReservaView {
     @Column(name = "tiporeserva")
     private String tipoReserva;
 
+    @Column(name = "codigocliente")
+    private String codigoCliente;
+
     @Column(name = "nombrecliente")
     private String nombreCliente;
 
@@ -36,10 +39,10 @@ public class ReservaView {
     @Column(name = "estadocolor")
     private String estadoColor;
 
-    // Getters básicos que necesita SvelteKit
     public Integer getIdReserva() { return idReserva; }
     public String getCodigoReserva() { return codigoReserva; }
     public String getTipoReserva() { return tipoReserva; }
+    public String getCodigoCliente() { return codigoCliente; }
     public String getNombreCliente() { return nombreCliente; }
     public String getNombreHuesped() { return nombreHuesped; }
     public LocalDateTime getFechaReserva() { return fechaReserva; }

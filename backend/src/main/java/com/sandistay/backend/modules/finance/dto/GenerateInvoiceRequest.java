@@ -1,11 +1,11 @@
 package com.sandistay.backend.modules.finance.dto;
 
-import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.NotBlank;
 
 /**
  * DTO inmutable para solicitar la generación de una factura.
  */
 public record GenerateInvoiceRequest(
-        @NotNull(message = "El ID de la reserva es obligatorio")
-        Integer idReserva
+        @NotBlank(message = "El código de la reserva es obligatorio")
+        String codigoReserva // Antes era Integer idReserva
 ) {}

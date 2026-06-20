@@ -52,15 +52,14 @@
 				</p>
 
 				<form onsubmit={descargarFactura} class="space-y-4">
-					<Input
-						id="idReserva"
-						label="ID de la Reserva"
-						type="number"
-						min="1"
-						bind:value={idReservaFactura}
-						required
-						placeholder="Ej: 1"
-					/>
+					<Input 
+                        id="codigoReserva" 
+                        label="Código de la Reserva" 
+                        type="text" 
+                        bind:value={idReservaFactura} 
+                        required 
+                        placeholder="Ej: RES-A1B2C3D4"
+                    />
 					<Button type="submit" variant="primary" class="w-full">Generar y Descargar PDF</Button>
 				</form>
 			</div>

@@ -6,6 +6,8 @@ import com.sandistay.backend.modules.rooms.model.RoomAvailabilityProjection;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.Repository;
 import org.springframework.data.repository.query.Param;
+
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.util.List;
@@ -60,5 +62,15 @@ public interface CatalogRepository extends Repository<HabitacionView, Integer> {
      * Busca el detalle de una habitación específica usando la vista SQL.
      */
     Optional<HabitacionView> findById(Integer id);
+    
+    /**
+     * Busca el porcentaje de descuento de un cliente por su documento.
+     * Retorna 0 si no existe o no tiene descuento.
+     */
+    @Query(value = "SELECT tc.porcentajeDescuento FROM Cliente c " +
+                   "INNER JOIN Persona p ON c.idPersona = p.idPersona " +
+                   "INNER JOIN TipoCliente tc ON c.idTipoCliente = tc.idTipoCliente " +
+                   "WHERE p.numeroDocumento = :documento", nativeQuery = true)
+    BigDecimal getDescuentoByDocumento(@Param("documento") String documento);
 
 }
