@@ -2,13 +2,27 @@ import { error } from '@sveltejs/kit';
 import type { PageServerLoad } from './$types';
 import { PUBLIC_API_URL } from '$env/static/public';
 
-export const load: PageServerLoad = async ({ fetch, locals, url }) => {
-    const token = locals.token;
-    if (!token) error(401, 'No autorizado');
+// --- INTERFACES (DTOs) ---
+/**
+ * @interface OccupancyRow
+ * @description Mapea la respuesta del reporte de ocupación (probablemente proveniente de una Vista o SP en PostgreSQL).
+ */
+export interface OccupancyRow {
+    out_fecha: string;
+    out_tipo: string;
+    out_ocupadas: number;
+    out_ingreso: number;
+}
 
-    // Extraemos las fechas de la URL si existen (ej: ?start=2026-05-01&end=2026-05-31)
-    const start = url.searchParams.get('start') || '';
-    const end = url.searchParams.get('end') || '';
+export const load: PageServerLoad = async ({ fetch, locals, url }) => {
+    // Validación de seguridad (Zero Trust)
+    if (!locals.token || !locals.user) {
+        error(401, 'No autorizado');
+    }
+
+    // Extraemos y sanitizamos las fechas de la URL
+    const start = url.searchParams.get('start')?.trim() || '';
+    const end = url.searchParams.get('end')?.trim() || '';
 
     let apiUrl = `${PUBLIC_API_URL}/reports/occupancy`;
     if (start && end) {
@@ -17,12 +31,14 @@ export const load: PageServerLoad = async ({ fetch, locals, url }) => {
 
     try {
         const response = await fetch(apiUrl, {
-            headers: { 'Authorization': `Bearer ${token}` }
+            headers: { 'Authorization': `Bearer ${locals.token}` }
         });
 
-        if (!response.ok) throw new Error('Error al cargar el reporte');
+        if (!response.ok) {
+            throw new Error(`HTTP Error ${response.status}`);
+        }
         
-        const occupancy = await response.json();
+        const occupancy: OccupancyRow[] = await response.json();
 
         return { 
             occupancy, 
@@ -30,7 +46,7 @@ export const load: PageServerLoad = async ({ fetch, locals, url }) => {
             end 
         };
     } catch (err) {
-        console.error('Error:', err);
-        error(500, 'No se pudo cargar el reporte de ocupación.');
+        console.error('[Reports Load Error]', err);
+        error(500, 'No se pudo cargar el reporte de ocupación y financiero.');
     }
 };

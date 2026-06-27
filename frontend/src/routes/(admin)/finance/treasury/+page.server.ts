@@ -2,14 +2,31 @@ import { error, fail } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from './$types';
 import { PUBLIC_API_URL } from '$env/static/public';
 
+// --- INTERFACES (DTOs) ---
+export interface ReceivableDTO {
+    idReserva: number;
+    codigoReserva: string;
+    tipoReserva: string;
+    nombreCliente: string;
+    saldoPendiente: number;
+}
+
+export interface RefundDTO {
+    idPago: number;
+    codigoPago: string;
+    idReserva: number;
+    monto: number;
+    observaciones: string;
+}
+
 export const load: PageServerLoad = async ({ fetch, locals }) => {
-    // 1. BARRERA DE SEGURIDAD: Solo el ADMIN puede entrar a Tesorería
-    if (locals.userRole !== 'ADMIN') {
+    // 1. BARRERA DE SEGURIDAD (Zero Trust): Solo el ADMIN puede entrar a Tesorería
+    if (locals.user?.role !== 'ADMIN') {
         error(403, 'Acceso denegado. Solo los administradores pueden acceder a Tesorería.');
     }
 
     try {
-        // 2. Traemos las Cuentas por Cobrar y los Reembolsos Pendientes en paralelo
+        // 2. Optimización de Latencia: Peticiones en paralelo
         const [resReceivables, resRefunds] = await Promise.all([
             fetch(`${PUBLIC_API_URL}/finance/treasury/receivables`, {
                 headers: { 'Authorization': `Bearer ${locals.token}` }
@@ -23,30 +40,33 @@ export const load: PageServerLoad = async ({ fetch, locals }) => {
             throw new Error('Error al cargar los datos de tesorería');
         }
 
-        return {
-            receivables: await resReceivables.json(),
-            refunds: await resRefunds.json()
-        };
+        const receivables: ReceivableDTO[] = await resReceivables.json();
+        const refunds: RefundDTO[] = await resRefunds.json();
+
+        return { receivables, refunds };
 
     } catch (err) {
-        console.error('Error:', err);
+        console.error('[Treasury Load Error]', err);
         error(500, 'No se pudo cargar el módulo de tesorería.');
     }
 };
 
 export const actions: Actions = {
     
-    // Acción para registrar un nuevo pago/abono
+    /**
+     * @action registerPayment
+     * @description Registra un abono o pago total a una cuenta por cobrar.
+     */
     registerPayment: async ({ request, locals, fetch }) => {
-        if (locals.userRole !== 'ADMIN') return fail(403, { error: 'No autorizado' });
+        if (locals.user?.role !== 'ADMIN') return fail(403, { error: 'No autorizado' });
         
         const data = await request.formData();
         const payload = {
-            idReserva: parseInt(data.get('idReserva') as string),
-            monto: parseFloat(data.get('monto') as string),
-            idMetodoPago: parseInt(data.get('idMetodoPago') as string),
-            referencia: data.get('referencia'),
-            observaciones: data.get('observaciones')
+            idReserva: parseInt(data.get('idReserva')?.toString() || '0'),
+            monto: parseFloat(data.get('monto')?.toString() || '0'),
+            idMetodoPago: parseInt(data.get('idMetodoPago')?.toString() || '1'),
+            referencia: data.get('referencia')?.toString(),
+            observaciones: data.get('observaciones')?.toString()
         };
 
         try {
@@ -60,8 +80,13 @@ export const actions: Actions = {
             });
 
             if (!response.ok) {
-                const errData = await response.json();
-                return fail(response.status, { error: errData.message || 'Error al registrar el pago.' });
+                const contentType = response.headers.get("content-type");
+                let errorMessage = 'Error al registrar el pago.';
+                if (contentType && contentType.includes("application/json")) {
+                    const errData = await response.json();
+                    errorMessage = errData.message || errorMessage;
+                }
+                return fail(response.status, { error: errorMessage });
             }
 
             return { success: true, message: 'Pago registrado exitosamente. Los saldos se han actualizado.' };
@@ -70,9 +95,12 @@ export const actions: Actions = {
         }
     },
 
-    // Acción para marcar un reembolso como completado
+    /**
+     * @action processRefund
+     * @description Marca un reembolso pendiente como "DEVUELTO" tras realizar la transferencia manual.
+     */
     processRefund: async ({ request, locals, fetch }) => {
-        if (locals.userRole !== 'ADMIN') return fail(403, { error: 'No autorizado' });
+        if (locals.user?.role !== 'ADMIN') return fail(403, { error: 'No autorizado' });
         
         const data = await request.formData();
         const idPago = data.get('idPago');
@@ -84,8 +112,13 @@ export const actions: Actions = {
             });
 
             if (!response.ok) {
-                const errData = await response.json();
-                return fail(response.status, { error: errData.message || 'Error al procesar el reembolso.' });
+                const contentType = response.headers.get("content-type");
+                let errorMessage = 'Error al procesar el reembolso.';
+                if (contentType && contentType.includes("application/json")) {
+                    const errData = await response.json();
+                    errorMessage = errData.message || errorMessage;
+                }
+                return fail(response.status, { error: errorMessage });
             }
 
             return { success: true, message: 'Reembolso marcado como DEVUELTO exitosamente.' };

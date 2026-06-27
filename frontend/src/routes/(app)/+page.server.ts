@@ -1,9 +1,11 @@
 import type { PageServerLoad } from './$types';
 import { PUBLIC_API_URL } from '$env/static/public';
 
-// Definimos la interfaz (molde) de lo que esperamos recibir de Spring Boot.
-// Esto debe coincidir exactamente con el DTO 'CatalogRoomResponse' de Java.
-export interface Room {
+/**
+ * @interface FeaturedRoom
+ * @description DTO para las habitaciones destacadas en la Landing Page.
+ */
+export interface FeaturedRoom {
     id: number;
     codigo: string;
     numero: string;
@@ -17,37 +19,42 @@ export interface Room {
     imagenPrincipal: string;
 }
 
-export const load: PageServerLoad = async ({ fetch }) => {
+export const load: PageServerLoad = async ({ fetch, setHeaders }) => {
+    
+    // OPTIMIZACIÓN SEO Y RENDIMIENTO (Edge Caching)
+    // La Landing Page debe ser ultrarrápida. Cacheamos por 60 segundos.
+    setHeaders({
+        'Cache-Control': 'public, max-age=60, s-maxage=60'
+    });
+
     try {
-        // 1. Hacemos la petición HTTP a nuestro Backend en Spring Boot
-        // Usamos el fetch especial de SvelteKit que está optimizado para SSR
         const response = await fetch(`${PUBLIC_API_URL}/catalog/rooms`);
 
-        // 2. Verificamos si la respuesta fue exitosa (Código 200-299)
         if (!response.ok) {
-            console.error(`Error del Backend: ${response.status} ${response.statusText}`);
+            console.error(`[Landing Error] HTTP ${response.status}`);
+            // Soft-Fail: Retornamos un error controlado para no romper el Hero Section
             return {
-                rooms: [] as Room[],
-                error: 'No se pudieron cargar las habitaciones en este momento.'
+                rooms: [] as FeaturedRoom[],
+                error: 'En este momento estamos actualizando nuestro catálogo.'
             };
         }
 
-        // 3. Convertimos el JSON de respuesta a nuestro arreglo de objetos Room
-        const rooms: Room[] = await response.json();
+        const allRooms: FeaturedRoom[] = await response.json();
+        
+        // Regla de UI: Solo mostramos un máximo de 3 habitaciones en la sección "Destacadas"
+        const featuredRooms = allRooms.slice(0, 3);
 
-        // 4. Retornamos los datos. 
-        // SvelteKit inyectará este objeto automáticamente en la variable 'data' de +page.svelte
         return {
-            rooms,
+            rooms: featuredRooms,
             error: null
         };
 
     } catch (err) {
-        // 5. Manejo de errores de red (Ej: Spring Boot está apagado)
-        console.error('Error de conexión con el Backend:', err);
+        console.error('[Landing Network Error]', err);
+        // Soft-Fail: El backend está inaccesible, pero la web pública sigue viva
         return {
-            rooms:[] as Room[],
-            error: 'Error de conexión con el servidor.'
+            rooms: [] as FeaturedRoom[],
+            error: 'No se pudo conectar con el servidor del hotel.'
         };
     }
 };

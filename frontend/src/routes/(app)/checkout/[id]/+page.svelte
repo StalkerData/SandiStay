@@ -4,15 +4,20 @@
 	import Button from '$lib/components/ui/Button.svelte';
 	import Input from '$lib/components/ui/Input.svelte';
 	import type { PageData } from './$types';
-	import { PUBLIC_API_URL } from '$env/static/public'; // <--- IMPORTACIÓN CLAVE
+	import type { CatalogItem } from './+page.server';
+	import { PUBLIC_API_URL } from '$env/static/public';
 
+	// --- PROPS & ESTADO DERIVADO (Svelte 5 Runes) ---
 	let { data }: { data: PageData } = $props();
-	let item = $derived(data.room);
+	let item: CatalogItem = $derived(data.room);
 	let tipoReserva = $derived($page.url.searchParams.get('type') || 'Habitacion');
 
+	// --- ESTADO DEL WIZARD ---
 	let pasoActual = $state(1); 
-	let comprobantePago = $state(''); 
+	let isSubmitting = $state(false);
+	let errorMessage = $state('');
 
+	// --- ESTADO DEL FORMULARIO (Datos del Huésped y Reserva) ---
 	let fechaInicio = $state('');
 	let fechaFin = $state('');
 	let horaInicio = $state('08:00');
@@ -28,13 +33,17 @@
 	let telefonoHuesped = $state('');
 	let idPais = $state(1); 
 	
+	// --- ESTADO FINANCIERO ---
 	let metodoPago = $state('NEQUI');
-	let pagoCompleto = $state(false); // Para áreas
-	let isSubmitting = $state(false);
-	let errorMessage = $state('');
+	let comprobantePago = $state(''); 
+	let pagoCompleto = $state(false); // Aplica solo para Áreas Sociales
 	let descuentoPorcentaje = $state(0);
 
-	// --- CALCULADORA REACTIVA ---
+	// --- CALCULADORA REACTIVA DE NEGOCIO ---
+	/**
+	 * @description Calcula la duración de la estadía. 
+	 * Retorna Días (para Habitaciones) u Horas (para Áreas).
+	 */
 	let cantidadTiempo = $derived.by(() => {
 		if (tipoReserva === 'Habitacion' && fechaInicio && fechaFin) {
 			const diffTime = Math.abs(new Date(fechaFin).getTime() - new Date(fechaInicio).getTime());
@@ -49,36 +58,54 @@
 		return 0;
 	});
 
-	let precioBase = $derived(tipoReserva === 'Habitacion' ? item.precioNoche : item.precioHora);
+	let precioBase = $derived(tipoReserva === 'Habitacion' ? (item.precioNoche ?? 0) : (item.precioHora ?? 0));
 	let subtotal = $derived(cantidadTiempo * precioBase);
 	let valorDescuento = $derived(subtotal * (descuentoPorcentaje / 100));
 	let totalReserva = $derived(subtotal - valorDescuento);
-	let totalAPagarHoy = $derived(tipoReserva === 'Habitacion' || pagoCompleto ? totalReserva : totalReserva * 0.30);
+	
+	/**
+	 * @description Regla de Negocio: Las habitaciones se pagan al 100%. 
+	 * Las áreas permiten un anticipo del 30% (Split Payment).
+	 */
+	let totalAPagarHoy = $derived(
+		tipoReserva === 'Habitacion' || pagoCompleto ? totalReserva : totalReserva * 0.30
+	);
 
+	// --- FUNCIONES DE CONTROLADOR ---
+
+	/**
+	 * @description Valida el CRM para aplicar descuentos antes de pasar a la pasarela de pago.
+	 */
 	async function irAlPago(e: Event) {
 		e.preventDefault();
 		isSubmitting = true;
+		errorMessage = '';
 		
 		try {
-			// USAMOS PUBLIC_API_URL
 			const res = await fetch(`${PUBLIC_API_URL}/catalog/discount?documento=${documentoHuesped}`);
 			if (res.ok) {
 				const data = await res.json();
-				descuentoPorcentaje = data.descuento;
+				descuentoPorcentaje = data.descuento || 0;
 			}
 		} catch (err) {
-			console.error("No se pudo verificar el descuento", err);
+			console.warn("[CRM] No se pudo verificar el descuento del cliente", err);
+			// No bloqueamos el flujo si el CRM falla (Resiliencia)
 		} finally {
 			isSubmitting = false;
 			pasoActual = 2;
-			window.scrollTo(0, 0);
+			window.scrollTo({ top: 0, behavior: 'smooth' });
 		}
 	}
 
 	function volverADatos() {
 		pasoActual = 1;
+		errorMessage = '';
 	}
 
+	/**
+	 * @description Construye el DTO y envía la transacción al Backend.
+	 * Mapea exactamente con CreateBookingRequest.java
+	 */
 	async function handlePayment() {
 		isSubmitting = true;
 		errorMessage = '';
@@ -88,8 +115,8 @@
             itemId: item.id || item.idArea,
             fechaInicio: fechaInicio,
             fechaFin: tipoReserva === 'Habitacion' ? fechaFin : null,
-            horaInicio: tipoReserva === 'Area' ? horaInicio + ':00' : null,
-            horaFin: tipoReserva === 'Area' ? horaFin + ':00' : null,
+            horaInicio: tipoReserva === 'Area' ? `${horaInicio}:00` : null,
+            horaFin: tipoReserva === 'Area' ? `${horaFin}:00` : null,
             numeroAdultos: numeroAdultos,
             numeroNinos: tipoReserva === 'Habitacion' ? numeroNinos : 0,
             nombresHuesped: nombresHuesped,
@@ -104,7 +131,6 @@
         };
 
 		try {
-			// USAMOS PUBLIC_API_URL
 			const res = await fetch(`${PUBLIC_API_URL}/bookings`, {
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json' },
@@ -115,12 +141,20 @@
 				const result = await res.json();
 				goto(`/checkout/success?code=${result.codigoReserva}`);
 			} else {
-				const errData = await res.json();
-				errorMessage = errData.message || 'Error al procesar la reserva.';
+				// Manejo seguro de errores (evita crash si Nginx devuelve HTML)
+				const contentType = res.headers.get("content-type");
+				if (contentType && contentType.indexOf("application/json") !== -1) {
+					const errData = await res.json();
+					errorMessage = errData.message || 'Error de validación en el servidor.';
+				} else {
+					errorMessage = `Error del servidor (${res.status}). Por favor, intenta de nuevo.`;
+				}
 				pasoActual = 1; 
 			}
 		} catch (err) {
-			errorMessage = 'Error de conexión con el servidor.';
+			console.error('[Checkout Error]', err);
+			errorMessage = 'Error de conexión con el servidor. Verifica tu internet.';
+			pasoActual = 1;
 		} finally {
 			isSubmitting = false;
 		}
@@ -132,6 +166,7 @@
 </svelte:head>
 
 <div class="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
+	<!-- WIZARD PROGRESS BAR -->
 	<div class="mb-8 flex items-center justify-center">
 		<div class="flex items-center gap-4">
 			<div class="flex items-center gap-2 {pasoActual === 1 ? 'font-bold text-primary' : 'text-neutral'}">
@@ -147,6 +182,7 @@
 	</div>
 
 	<div class="grid grid-cols-1 gap-12 lg:grid-cols-3">
+		<!-- COLUMNA IZQUIERDA: FORMULARIOS -->
 		<div class="space-y-8 lg:col-span-2">
 			{#if pasoActual === 1}
 				<form id="datosForm" onsubmit={irAlPago} class="space-y-8">
@@ -163,7 +199,7 @@
 									<Input id="horaFin" label="Hora Fin" type="time" bind:value={horaFin} required />
 								</div>
 							{/if}
-							<Input id="adultos" label={tipoReserva === 'Habitacion' ? 'Adultos' : 'Asistentes'} type="number" min="1" bind:value={numeroAdultos} required />
+							<Input id="adultos" label={tipoReserva === 'Habitacion' ? 'Adultos' : 'Asistentes'} type="number" min="1" max={item.capacidadMaxima} bind:value={numeroAdultos} required />
 							{#if tipoReserva === 'Habitacion'}
 								<Input id="ninos" label="Niños" type="number" min="0" bind:value={numeroNinos} required />
 							{/if}
@@ -177,7 +213,7 @@
 							<Input id="apellidos" label="Apellidos" type="text" bind:value={apellidosHuesped} required />
 							<div class="flex flex-col gap-1">
 								<label for="idTipoDocumento" class="text-sm font-medium text-dark">Tipo de Documento</label>
-								<select bind:value={idTipoDocumento} class="rounded-md border border-neutral/30 px-3 py-2 focus:ring-secondary">
+								<select id="idTipoDocumento" bind:value={idTipoDocumento} class="rounded-md border border-neutral/30 px-3 py-2 focus:ring-secondary">
 									<option value={1}>Cédula de Ciudadanía</option>
 									<option value={2}>Cédula de Extranjería</option>
 									<option value={3}>Pasaporte</option>
@@ -189,7 +225,7 @@
 							<Input id="telefono" label="Teléfono" type="tel" bind:value={telefonoHuesped} required />
 							<div class="flex flex-col gap-1 md:col-span-2">
 								<label for="idPais" class="text-sm font-medium text-dark">País de Origen</label>
-								<select bind:value={idPais} class="rounded-md border border-neutral/30 px-3 py-2 focus:ring-secondary">
+								<select id="idPais" bind:value={idPais} class="rounded-md border border-neutral/30 px-3 py-2 focus:ring-secondary">
 									<option value={1}>Colombia</option>
 									<option value={2}>Venezuela</option>
 									<option value={3}>Estados Unidos</option>
@@ -202,15 +238,17 @@
 				<section class="animate-fade-in rounded-xl border border-neutral/10 bg-surface p-6 shadow-sm">
 					<div class="mb-6 flex items-center justify-between">
 						<h2 class="text-xl font-bold text-secondary">3. Pago Seguro</h2>
-						<button onclick={volverADatos} class="text-sm text-neutral underline hover:text-primary">← Volver a mis datos</button>
+						<button type="button" onclick={volverADatos} class="text-sm text-neutral underline hover:text-primary transition-colors">
+							← Volver a mis datos
+						</button>
 					</div>
 
 					<div class="mb-6 flex gap-4">
-						<label class="flex cursor-pointer items-center gap-2 rounded-lg border p-4 hover:bg-base/50 {metodoPago === 'NEQUI' ? 'border-primary bg-primary/5' : 'border-neutral/20'}">
+						<label class="flex cursor-pointer items-center gap-2 rounded-lg border p-4 transition-colors hover:bg-base/50 {metodoPago === 'NEQUI' ? 'border-primary bg-primary/5' : 'border-neutral/20'}">
 							<input type="radio" bind:group={metodoPago} value="NEQUI" class="hidden" />
 							<span class="text-lg font-bold">Nequi</span>
 						</label>
-						<label class="flex cursor-pointer items-center gap-2 rounded-lg border p-4 hover:bg-base/50 {metodoPago === 'DAVIPLATA' ? 'border-primary bg-primary/5' : 'border-neutral/20'}">
+						<label class="flex cursor-pointer items-center gap-2 rounded-lg border p-4 transition-colors hover:bg-base/50 {metodoPago === 'DAVIPLATA' ? 'border-primary bg-primary/5' : 'border-neutral/20'}">
 							<input type="radio" bind:group={metodoPago} value="DAVIPLATA" class="hidden" />
 							<span class="text-lg font-bold">Daviplata</span>
 						</label>
@@ -229,13 +267,13 @@
 			{/if}
 		</div>
 
+		<!-- COLUMNA DERECHA: RESUMEN (STICKY) -->
 		<div class="lg:col-span-1">
 			<div class="sticky top-24 rounded-xl border border-neutral/10 bg-surface p-6 shadow-lg">
 				<h3 class="mb-4 font-serif text-xl font-bold text-dark">Resumen de Reserva</h3>
 
 				<div class="mb-6 flex gap-4 border-b border-neutral/10 pb-6">
-					<!-- USAMOS PUBLIC_API_URL PARA LA IMAGEN -->
-					<img src={`${PUBLIC_API_URL}${item.imagenPrincipal}`} alt="Foto" class="h-20 w-20 rounded-md object-cover" onerror={(e) => (e.currentTarget.src = 'https://via.placeholder.com/200?text=Sin+Imagen')} />
+					<img src={`${PUBLIC_API_URL}${item.imagenPrincipal}`} alt={item.nombre} class="h-20 w-20 rounded-md object-cover" onerror={(e) => (e.currentTarget.src = 'https://via.placeholder.com/200?text=Sin+Imagen')} />
 					<div>
 						<p class="font-bold text-dark">{item.nombre}</p>
 						<p class="text-sm text-neutral">{item.tipo || item.tipoArea}</p>
@@ -289,13 +327,17 @@
 				</div>
 
 				{#if errorMessage}
-					<div class="mb-4 rounded-md bg-red-100 p-3 text-sm text-red-700">{errorMessage}</div>
+					<div class="mb-4 rounded-md bg-red-100 p-3 text-sm text-red-700 border border-red-200" role="alert">
+						{errorMessage}
+					</div>
 				{/if}
 
 				{#if pasoActual === 1}
-					<Button type="submit" form="datosForm" variant="primary" class="w-full py-3 text-lg">Continuar al Pago</Button>
+					<Button type="submit" form="datosForm" variant="primary" class="w-full py-3 text-lg transition-transform active:scale-95">
+						Continuar al Pago
+					</Button>
 				{:else}
-					<Button onclick={handlePayment} variant="primary" class="w-full py-3 text-lg" disabled={isSubmitting || !comprobantePago}>
+					<Button onclick={handlePayment} variant="primary" class="w-full py-3 text-lg transition-transform active:scale-95" disabled={isSubmitting || !comprobantePago}>
 						{isSubmitting ? 'Verificando en el Banco...' : 'Verificar Pago y Reservar'}
 					</Button>
 				{/if}

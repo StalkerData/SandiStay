@@ -1,52 +1,70 @@
 import { error } from '@sveltejs/kit';
 import type { PageServerLoad } from './$types';
-import type { Room } from '../../+page.server';
 import { PUBLIC_API_URL } from '$env/static/public';
 
-export const load: PageServerLoad = async ({ params, fetch }) => {
-    // 1. Extraemos el ID de la URL (ej: si la URL es /rooms/1, params.id será "1")
+/**
+ * @interface RoomDetail
+ * @description DTO específico para la vista de detalle. Contiene más información 
+ * que el DTO del catálogo general (ej. capacidades específicas, precio de pasadía).
+ */
+export interface RoomDetail {
+    id: number;
+    numero: string;
+    nombre: string;
+    tipo: string;
+    descripcion: string;
+    precioNoche: number;
+    precioDia: number;
+    capacidadAdultos: number;
+    capacidadNinos: number;
+    capacidadMaxima: number;
+    imagenPrincipal: string;
+}
+
+/**
+ * @function load
+ * @description Carga los detalles de una habitación específica.
+ * Implementa Edge Caching para optimizar el rendimiento de lectura.
+ */
+export const load: PageServerLoad = async ({ params, fetch, setHeaders }) => {
     const roomId = params.id;
 
+    // OPTIMIZACIÓN DE RENDIMIENTO (Caching)
+    // Cacheamos esta respuesta en el CDN/Navegador por 5 minutos.
+    setHeaders({
+        'Cache-Control': 'public, max-age=300, s-maxage=300'
+    });
+
     try {
-        // 2. Hacemos la petición a Spring Boot pidiendo esa habitación específica
         const response = await fetch(`${PUBLIC_API_URL}/catalog/rooms/${roomId}`);
 
-        // 3. Manejo de errores HTTP
         if (!response.ok) {
             if (response.status === 404) {
-                // Si Spring Boot dice que no existe, lanzamos un error 404 de SvelteKit
-                // Esto mostrará automáticamente la página de error 404 de Svelte
+                // Error controlado: El ID no existe en la base de datos
                 error(404, {
-                    message: 'La habitación que buscas no existe o no está disponible.'
+                    message: 'La habitación que buscas no existe o fue retirada del catálogo.'
                 });
             }
-            
-            // Para otros errores (500, etc.)
-            console.error(`Error del Backend: ${response.status}`);
-            error(500, {
-                message: 'Ocurrió un error al consultar los detalles de la habitación.'
-            });
+            throw new Error(`HTTP ${response.status}`);
         }
 
-        // 4. Convertimos el JSON a nuestro objeto Room
-        const room: Room = await response.json();
+        const room: RoomDetail = await response.json();
 
-        // 5. Retornamos los datos a la página (+page.svelte)
         return {
             room
         };
 
     } catch (err) {
-        // 6. Manejo de errores de red (Spring Boot apagado)
-        console.error('Error de conexión con el Backend:', err);
+        console.error(`[Room Detail Error] ID ${roomId}:`, err);
         
-        // Si el error ya es un HttpError de SvelteKit (lanzado arriba), lo dejamos pasar
+        // Si el error es un HttpError de SvelteKit (como el 404 de arriba), lo dejamos propagar
         if (err && typeof err === 'object' && 'status' in err) {
             throw err;
         }
         
+        // Error genérico de infraestructura (ej. Spring Boot apagado)
         error(500, {
-            message: 'No se pudo conectar con el servidor del hotel.'
+            message: 'No se pudo conectar con el servidor del hotel. Intenta nuevamente.'
         });
     }
 };

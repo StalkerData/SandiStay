@@ -1,15 +1,15 @@
-// See https://svelte.dev/docs/kit/types#app.d.ts
+// See https://kit.svelte.dev/docs/types#app
 // for information about these interfaces
 declare global {
 	namespace App {
 		// interface Error {}
-		
-		// Definimos las variables globales que inyecta nuestro hooks.server.ts
 		interface Locals {
-			token?: string;
-			userRole?: string;
+			token: string | undefined;
+			user: {
+				username: string;
+				role: string;
+			} | undefined;
 		}
-		
 		// interface PageData {}
 		// interface PageState {}
 		// interface Platform {}
