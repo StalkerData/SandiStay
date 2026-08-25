@@ -12,6 +12,7 @@ import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.multipart.MaxUploadSizeExceededException;
 
 import java.time.LocalDateTime;
 import java.util.stream.Collectors;
@@ -23,7 +24,6 @@ import java.util.stream.Collectors;
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
-    // Instanciación manual del Logger nativo
     private static final Logger logger = LoggerFactory.getLogger(GlobalExceptionHandler.class);
 
     /**
@@ -31,8 +31,6 @@ public class GlobalExceptionHandler {
      */
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<ErrorResponse> handleValidationExceptions(MethodArgumentNotValidException ex, HttpServletRequest request) {
-
-        // Formateamos los errores de forma limpia usando Streams
         String errorMessage = ex.getBindingResult().getFieldErrors().stream()
                 .map(error -> error.getField() + ": " + error.getDefaultMessage())
                 .collect(Collectors.joining(", "));
@@ -83,12 +81,10 @@ public class GlobalExceptionHandler {
      */
     @ExceptionHandler(DataIntegrityViolationException.class)
     public ResponseEntity<ErrorResponse> handleDataIntegrityViolation(DataIntegrityViolationException ex, HttpServletRequest request) {
-        // Logueamos el error real para el equipo de DevOps
         logger.error("Data Integrity Error: {}", ex.getMessage());
 
         String message = "Error de integridad de datos. Es posible que el registro ya exista o esté en uso.";
 
-        // Detección inteligente del tipo de constraint
         if (ex.getMessage() != null) {
             if (ex.getMessage().contains("exclude")) {
                 message = "Las fechas seleccionadas ya están ocupadas (Overbooking detectado).";
@@ -114,7 +110,6 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ErrorResponse> handleDataAccessException(DataAccessException ex, HttpServletRequest request) {
         String mensajeUsuario = "Error al procesar la operación en la base de datos.";
 
-        // Extracción segura del mensaje de PL/pgSQL
         if (ex.getCause() != null && ex.getCause().getCause() != null) {
             String mensajeSql = ex.getCause().getCause().getMessage();
             if (mensajeSql != null && mensajeSql.contains("ERROR:")) {
@@ -150,11 +145,25 @@ public class GlobalExceptionHandler {
     }
 
     /**
-     * 7. Fallback: Maneja cualquier error inesperado (Error 500).
+     * 7. Maneja el error cuando se intenta subir un archivo más pesado que el límite permitido.
+     */
+    @ExceptionHandler(MaxUploadSizeExceededException.class)
+    public ResponseEntity<ErrorResponse> handleMaxSizeException(MaxUploadSizeExceededException ex, HttpServletRequest request) {
+        ErrorResponse errorResponse = new ErrorResponse(
+                LocalDateTime.now(),
+                HttpStatus.PAYLOAD_TOO_LARGE.value(),
+                "Payload Too Large",
+                "La imagen es demasiado pesada. El tamaño máximo permitido es de 5MB.",
+                request.getRequestURI()
+        );
+        return ResponseEntity.status(HttpStatus.PAYLOAD_TOO_LARGE).body(errorResponse);
+    }
+
+    /**
+     * 8. Fallback: Maneja cualquier error inesperado (Error 500).
      */
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ErrorResponse> handleGlobalException(Exception ex, HttpServletRequest request) {
-        // Logueamos el Stack Trace completo solo en el servidor
         logger.error("Unhandled Exception caught: ", ex);
 
         ErrorResponse errorResponse = new ErrorResponse(

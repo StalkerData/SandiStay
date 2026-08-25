@@ -44,7 +44,8 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
         final String authHeader = request.getHeader("Authorization");
 
-        // 1. Validación rápida (Fail-Fast)
+        // 1. Validación rápida (Fail-Fast): Si no hay token, sigue la cadena.
+        // Si la ruta es pública (permitAll), pasará. Si es privada, Spring Security lanzará 403.
         if (authHeader == null || !authHeader.startsWith("Bearer ")) {
             filterChain.doFilter(request, response);
             return;
@@ -60,7 +61,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 UserDetails userDetails = this.userDetailsService.loadUserByUsername(username);
 
                 if (jwtService.isTokenValid(jwt, userDetails)) {
-                    // 3. Crear el token de autenticación
+                    // 3. Crear el token de autenticación con los ROLES correctos
                     UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(
                             userDetails,
                             null,
@@ -69,12 +70,11 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
                     authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
 
-                    // 4. Establecer la autenticación en el contexto de seguridad estándar
+                    // 4. Establecer la autenticación en el contexto de seguridad
                     SecurityContextHolder.getContext().setAuthentication(authToken);
                 }
             }
         } catch (Exception e) {
-            // Logueamos el error de seguridad usando el logger moderno
             customLogger.error("Error de autenticación JWT: {}", e.getMessage());
         }
 

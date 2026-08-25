@@ -1,7 +1,7 @@
 spring:
   application:
     name: sandistay-backend
-  
+
   profiles:
     active: dev
 
@@ -11,11 +11,15 @@ spring:
     password: ${DB_PASSWORD:sandi_password123}
     driver-class-name: org.postgresql.Driver
 
+  servlet:
+    multipart:
+      max-file-size: 5MB
+      max-request-size: 5MB
+
 server:
   port: 8082
   servlet:
     context-path: /api/v1
-
 
 security:
   jwt:

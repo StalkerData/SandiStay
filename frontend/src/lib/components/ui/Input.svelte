@@ -9,9 +9,9 @@
 	}
 
 	let { label, id, value = $bindable(), error, class: className = '', ...rest }: Props = $props();
-	
+
 	// Generamos un ID único para el mensaje de error (Accesibilidad)
-	let errorId = `${id}-error`;
+	let errorId = $derived(`${id}-error`);
 </script>
 
 <div class="flex flex-col gap-1.5 {className}">

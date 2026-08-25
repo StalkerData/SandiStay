@@ -21,10 +21,6 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
 import java.util.List;
 
-/**
- * Configuración central de seguridad de la aplicación.
- * Define políticas CORS, CSRF, manejo de sesiones Stateless y protección de rutas.
- */
 @Configuration
 @EnableWebSecurity
 @EnableMethodSecurity
@@ -44,19 +40,14 @@ public class SecurityConfig {
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
             .cors(cors -> cors.configurationSource(corsConfigurationSource()))
-            .csrf(AbstractHttpConfigurer::disable) // Deshabilitado porque usamos JWT (Stateless)
+            .csrf(AbstractHttpConfigurer::disable)
             .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(auth -> auth
-                // --- RUTAS PÚBLICAS ---
                 .requestMatchers("/auth/login").permitAll()
                 .requestMatchers("/catalog/**").permitAll()
                 .requestMatchers("/uploads/**").permitAll()
-                .requestMatchers(HttpMethod.POST, "/bookings").permitAll() // Guest Checkout
-
-                // --- DOCUMENTACIÓN (Swagger/OpenAPI) ---
+                .requestMatchers(HttpMethod.POST, "/bookings").permitAll()
                 .requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
-
-                // --- RUTAS PRIVADAS ---
                 .anyRequest().authenticated()
             )
             .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
@@ -77,7 +68,10 @@ public class SecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-        configuration.setAllowedOrigins(List.of(allowedOrigin));
+
+        // CRÍTICO: Permitimos el Frontend (5173) Y el propio Backend (8082) para que el SSR de SvelteKit no sea bloqueado por CORS
+        configuration.setAllowedOrigins(List.of(allowedOrigin, "http://localhost:8082", "http://127.0.0.1:8082"));
+
         configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
         configuration.setAllowedHeaders(List.of("Authorization", "Content-Type"));
         configuration.setAllowCredentials(true);
