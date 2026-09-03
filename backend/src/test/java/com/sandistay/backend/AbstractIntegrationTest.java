@@ -12,35 +12,28 @@ import org.testcontainers.utility.MountableFile;
 
 import java.io.IOException;
 
-/**
- * Clase base para todas las pruebas de integración.
- * Levanta un contenedor Docker real de PostgreSQL 17 y un servidor HTTP falso (MockWebServer).
- */
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @Testcontainers
 public abstract class AbstractIntegrationTest {
 
     // 1. Contenedor de PostgreSQL 17
-    // Copiamos toda la carpeta 'init-db' al entrypoint de Postgres.
-    // Postgres ejecutará los archivos 01 al 06 en orden alfabético automáticamente.
     static final PostgreSQLContainer<?> postgres = new PostgreSQLContainer<>("postgres:17-alpine")
             .withDatabaseName("sandistay_test_db")
-            .withUsername("test_user")
-            .withPassword("test_pass")
+            // CRÍTICO: Usamos el superusuario 'postgres' para poder ejecutar CREATE EXTENSION btree_gist
+            .withUsername("postgres")
+            .withPassword("postgres")
+            // SOLUCIÓN DEFINITIVA: Copiamos el archivo físico al entrypoint de Postgres.
+            // Esto evita el parser de Java y deja que Postgres ejecute el PL/pgSQL nativamente.
             .withCopyFileToContainer(
-                    MountableFile.forClasspathResource("init-db"),
-                    "/docker-entrypoint-initdb.d/"
+                    MountableFile.forClasspathResource("init.sql"),
+                    "/docker-entrypoint-initdb.d/init.sql"
             );
 
-    // 2. Servidor HTTP falso para simular el microservicio de Python
     public static MockWebServer mockBackEnd;
 
     @BeforeAll
     static void beforeAll() throws IOException {
-        // Iniciamos Docker (Aquí se ejecutarán tus 6 scripts SQL)
         postgres.start();
-
-        // Iniciamos el servidor falso
         mockBackEnd = new MockWebServer();
         mockBackEnd.start();
     }
@@ -52,15 +45,13 @@ public abstract class AbstractIntegrationTest {
 
     @DynamicPropertySource
     static void configureProperties(DynamicPropertyRegistry registry) {
-        // Conexión a la BD de Docker
         registry.add("spring.datasource.url", postgres::getJdbcUrl);
         registry.add("spring.datasource.username", postgres::getUsername);
         registry.add("spring.datasource.password", postgres::getPassword);
 
-        // CRÍTICO: Apagamos el DDL-AUTO de Hibernate porque tus 6 scripts ya crearon TODO
+        // Apagamos Hibernate porque init.sql ya creó todo
         registry.add("spring.jpa.hibernate.ddl-auto", () -> "none");
 
-        // Redirigimos el PaymentClient hacia nuestro servidor falso
         registry.add("integration.payment.url", () -> mockBackEnd.url("/api/v1/bank/statement/verify").toString());
     }
 }

@@ -72,3 +72,8 @@ frontend/.env.*
 # Ignora el contenido pero mantiene la carpeta si tiene un .gitkeep
 SQL_Files/*
 !SQL_Files/.gitkeep
+
+# Archivos SQL generados dinámicamente para Testcontainers
+src/test/resources/init.sql
+backend/src/test/resources/init.sql
+
