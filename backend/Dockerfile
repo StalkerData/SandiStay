@@ -20,9 +20,16 @@ RUN ./gradlew bootJar --no-daemon -x test
 FROM eclipse-temurin:25-jre-alpine
 WORKDIR /app
 
+# SECURITY BY DESIGN: Crear un usuario sin privilegios de root
+RUN addgroup -S spring && adduser -S spring -G spring
+
 COPY --from=builder /build/build/libs/*.jar app.jar
 
-RUN mkdir -p /app/uploads
+# Crear carpeta de uploads y darle permisos al usuario 'spring'
+RUN mkdir -p /app/uploads && chown -R spring:spring /app
 
-EXPOSE 8080
+# Cambiar al usuario seguro
+USER spring:spring
+
+EXPOSE 8082
 ENTRYPOINT ["java", "-jar", "app.jar"]

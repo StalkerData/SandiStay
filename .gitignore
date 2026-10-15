@@ -34,7 +34,7 @@ pnpm-debug.log*
 *.class
 *.jar
 *.war
-.idea  
+.idea
 
 # --- 4. Frontend (SvelteKit / Node.js) ---
 **/node_modules/
@@ -76,4 +76,6 @@ SQL_Files/*
 # Archivos SQL generados dinámicamente para Testcontainers
 src/test/resources/init.sql
 backend/src/test/resources/init.sql
+
+.kilo
 
