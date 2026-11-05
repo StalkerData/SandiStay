@@ -69,9 +69,9 @@ frontend/.env.*
 !frontend/.env.example
 
 # --- 7. Directorio SQL_Files ---
-# Ignora el contenido pero mantiene la carpeta si tiene un .gitkeep
-SQL_Files/*
-!SQL_Files/.gitkeep
+# Mantenemos los scripts de estructura y seed base en el repositorio.
+# Solo ignoramos el script temporal de pruebas de rendimiento (por si lo vuelves a crear).
+SQL_Files/07_seed_test_performance.sql
 
 # Archivos SQL generados dinámicamente para Testcontainers
 src/test/resources/init.sql
