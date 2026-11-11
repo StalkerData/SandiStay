@@ -13,7 +13,7 @@ interface AuthResponse {
 
 /**
  * @function load
- * @description Middleware de ruta. Si el usuario ya tiene un token válido, 
+ * @description Middleware de ruta. Si el usuario ya tiene un token válido,
  * se le prohíbe ver el login y se le redirige al Dashboard (Zero Trust).
  */
 export const load: PageServerLoad = async ({ cookies }) => {
@@ -28,9 +28,9 @@ export const load: PageServerLoad = async ({ cookies }) => {
  * @description Server Actions para manejar la mutación de datos de forma segura en el servidor.
  */
 export const actions: Actions = {
-    
+
     login: async ({ request, cookies, fetch }) => {
-        
+
         // 1. Extracción de datos del FormData
         const data = await request.formData();
         const username = data.get('username')?.toString();
@@ -56,12 +56,12 @@ export const actions: Actions = {
             if (!response.ok) {
                 const contentType = response.headers.get("content-type");
                 let errorMessage = 'Credenciales incorrectas. Intenta de nuevo.';
-                
+
                 if (contentType && contentType.includes("application/json")) {
                     const errorData = await response.json();
                     errorMessage = errorData.message || errorMessage;
                 }
-                
+
                 return fail(response.status, { error: errorMessage });
             }
 
@@ -74,11 +74,11 @@ export const actions: Actions = {
             const maxAge = rememberMe ? 60 * 60 * 24 * 7 : undefined;
 
             cookies.set('jwt_token', token, {
-                path: '/', 
+                path: '/',
                 httpOnly: true, // Mitiga XSS: Inaccesible para document.cookie
-                sameSite: 'strict', // Mitiga CSRF
-                secure: process.env.NODE_ENV === 'production', // Solo HTTPS en Prod
-                maxAge: maxAge 
+                sameSite: 'lax',//'strict', // Mitiga CSRF
+                secure: false,//process.env.NODE_ENV === 'production', // Solo HTTPS en Prod
+                maxAge: maxAge
             });
 
             // 7. Cookie auxiliar para UI (No sensible)
@@ -86,8 +86,8 @@ export const actions: Actions = {
                 cookies.set('user_role', result.roles[0], {
                     path: '/',
                     httpOnly: false, // Accesible para Svelte en el cliente
-                    sameSite: 'strict',
-                    secure: process.env.NODE_ENV === 'production',
+                    sameSite: 'lax',//'strict',
+                    secure: false, //process.env.NODE_ENV === 'production',
                     maxAge: maxAge
                 });
             }

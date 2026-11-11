@@ -70,7 +70,8 @@ public class SecurityConfig {
         CorsConfiguration configuration = new CorsConfiguration();
 
         // CRÍTICO: Permitimos el Frontend (5173) Y el propio Backend (8082) para que el SSR de SvelteKit no sea bloqueado por CORS
-        configuration.setAllowedOrigins(List.of(allowedOrigin, "http://localhost:8082", "http://127.0.0.1:8082"));
+        //configuration.setAllowedOrigins(List.of(allowedOrigin, "http://localhost:8082", "http://127.0.0.1:8082"));
+        configuration.setAllowedOrigins(List.of(allowedOrigin, "http://localhost", "http://127.0.0.1"));
 
         configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
         configuration.setAllowedHeaders(List.of("Authorization", "Content-Type"));
