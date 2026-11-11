@@ -32,8 +32,9 @@ rm -f reporte_*.html zap.yaml
 # 5. Limpiar datos persistentes locales y uploads
 echo "💾 Limpiando volúmenes locales y uploads..."
 sudo rm -rf volumes/pg_data
-rm -rf uploads/*
+sudo rm -rf uploads/*
 mkdir -p uploads/Habitaciones uploads/Areas
+chmod -R a+w uploads
 
 # 6. Limpiar scripts temporales de pruebas y configs obsoletas
 echo "🗑️ Eliminando scripts temporales y redundantes..."
