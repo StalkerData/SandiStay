@@ -76,8 +76,8 @@ export const actions: Actions = {
             cookies.set('jwt_token', token, {
                 path: '/',
                 httpOnly: true, // Mitiga XSS: Inaccesible para document.cookie
-                sameSite: 'lax',//'strict', // Mitiga CSRF
-                secure: false,//process.env.NODE_ENV === 'production', // Solo HTTPS en Prod
+                sameSite: 'strict', // Mitiga CSRF
+                secure: process.env.NODE_ENV === 'production', // Solo HTTPS en Prod
                 maxAge: maxAge
             });
 
@@ -86,8 +86,8 @@ export const actions: Actions = {
                 cookies.set('user_role', result.roles[0], {
                     path: '/',
                     httpOnly: false, // Accesible para Svelte en el cliente
-                    sameSite: 'lax',//'strict',
-                    secure: false, //process.env.NODE_ENV === 'production',
+                    sameSite: 'strict',
+                    secure: process.env.NODE_ENV === 'production',
                     maxAge: maxAge
                 });
             }

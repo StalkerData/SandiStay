@@ -79,3 +79,7 @@ backend/src/test/resources/init.sql
 
 .kilo
 
+# Certificados SSL locales
+nginx/ssl/
+*.key
+*.crt
