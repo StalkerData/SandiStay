@@ -28,6 +28,8 @@ rm -rf frontend/node_modules frontend/build frontend/dist frontend/.svelte-kit
 echo "🧪 Limpiando reportes de pruebas..."
 rm -rf frontend/playwright-report frontend/test-results
 rm -f reporte_*.html zap.yaml
+rm -rf Documentation_Methodology
+
 
 # 5. Limpiar datos persistentes locales y uploads
 echo "💾 Limpiando volúmenes locales y uploads..."

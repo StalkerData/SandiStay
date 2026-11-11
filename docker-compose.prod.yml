@@ -78,6 +78,8 @@ services:
     build:
       context: ./frontend
       dockerfile: Dockerfile
+      args:
+        - PUBLIC_API_URL=${PUBLIC_API_URL}  # <--- Lee automáticamente del archivo .env
     container_name: prod_frontend
     restart: always
     environment:
